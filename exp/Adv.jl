@@ -21,8 +21,6 @@ mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
 app = Adv("periodic", "periodic", 1.0, 1.0)
 
 
-@show mesh.Δs_min[1, :, :]
-@show mesh.Δs_min[2, :, :]
 
 
 # initial condition
