@@ -1,7 +1,9 @@
 # Dycore-Playground
 
 src/Numerics: mesh, DG method, FV method
+
 src/Apps    : application-dependent numerics, like flux
+
 exp/Apps    : test cases
 
 
