@@ -63,7 +63,7 @@ function source(app::Adv, state_prognostic::Array{Float64, 1}, state_auxiliary::
 end
 
 
-function init_state_auxiliary!(app::DryEuler, mesh::Mesh, 
+function init_state_auxiliary!(app::Adv, mesh::Mesh, 
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
     state_auxiliary_surf_h::Array{Float64, 3}, state_auxiliary_surf_v::Array{Float64, 3})
     
