@@ -107,7 +107,7 @@ function horizontal_interface_tendency!(
                 if bc_left_type == "periodic"
                     local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁺, local_state⁺, local_aux⁺, [n1;n2])
                     
-                elseif bc_left_data == "no-slip"
+                elseif bc_left_type == "no-slip"
                     
                     local_flux = wall_flux_first_order(app, local_state⁺, local_aux⁺, [n1;n2])
                        
@@ -124,7 +124,7 @@ function horizontal_interface_tendency!(
                 if bc_right_type == "periodic"
                     local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁻, [n1;n2])
                     
-                elseif bc_right_data == "no-slip"
+                elseif bc_right_type == "no-slip"
                     
                     local_flux = wall_flux_first_order(app, local_state⁻, local_aux⁻, [n1;n2])
                     
@@ -257,9 +257,11 @@ function vertical_interface_tendency!(
             for iz = 1:Nz+1
                 e⁺ =  ix + (iz-1)*Nx
                 loc_aux = (iz == Nz+1 ? state_auxiliary_surf_v[il, :,  end, ix + (iz-2)*Nx] : state_auxiliary_surf_v[il, :,  1, e⁺])
-                state_primitive_face⁻[:,iz] = prim_to_prog(app, state_primitive_face⁻[:,iz], loc_aux)
-                state_primitive_face⁺[:,iz] = prim_to_prog(app, state_primitive_face⁺[:,iz], loc_aux)
+                state_prognostic_face⁻[:,iz] = prim_to_prog(app, state_primitive_face⁻[:,iz], loc_aux)
+                state_prognostic_face⁺[:,iz] = prim_to_prog(app, state_primitive_face⁺[:,iz], loc_aux)
             end
+
+
             ##########################################################################################################
             # compute face flux 
             
@@ -287,6 +289,7 @@ function vertical_interface_tendency!(
                     end
                     
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
+         
                     
                     # top 
                 elseif iz == Nz+1
@@ -305,6 +308,7 @@ function vertical_interface_tendency!(
                     end
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
+
                     
                 else
                     # bottom element
@@ -319,8 +323,10 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
+
                 end
             end 
+
         end
     end
 end

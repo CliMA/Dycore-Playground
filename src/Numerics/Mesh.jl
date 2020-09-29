@@ -153,6 +153,7 @@ function compute_min_nodal_dist(Nx::Int64, Nz::Int64, vol_l_geo::Array{Float64, 
     _, Nl, nelem = size(vol_l_geo)
 
     Δs_min = zeros(2, Nl, nelem)
+    fill!(Δs_min, Inf64)
     
     # horizontal direction
     for ix = 1:Nx
@@ -200,6 +201,10 @@ function compute_min_nodal_dist(Nx::Int64, Nz::Int64, vol_l_geo::Array{Float64, 
     end
 
     # vertical direction
+    if Nz == 1
+        return Δs_min
+    end
+
     for iz = 1:Nz
         for ix = 1:Nx
             e = ix + (iz-1)*Nx
@@ -209,9 +214,10 @@ function compute_min_nodal_dist(Nx::Int64, Nz::Int64, vol_l_geo::Array{Float64, 
             e⁺ = ix + mod(iz, Nz)*Nx
             for il = 1:Nl
                 
-                if iz == 1
+                if iz == 1 
                     x , z  = vol_l_geo[1:2, il, e]
                     x⁺, z⁺ = vol_l_geo[1:2, il, e⁺]   
+
                     Δs⁺ = sqrt((x⁺ - x)^2 + (z⁺ - z)^2)
                     Δs_min[2, il, e] = Δs⁺
 
@@ -230,7 +236,6 @@ function compute_min_nodal_dist(Nx::Int64, Nz::Int64, vol_l_geo::Array{Float64, 
 
                     Δs_min[2, il, e] = min(Δs⁻, Δs⁺)
                 end
-
             end
         end
     end

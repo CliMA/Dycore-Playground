@@ -8,7 +8,7 @@ include("../src/Numerics/Solver.jl")
 function shock_tube(direction::String)
     @assert(direction == "horizontal" || direction == "vertical")
     
-    Np = 4
+    Np = 2
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
     topology_type = "AtmoLES"
@@ -20,7 +20,7 @@ function shock_tube(direction::String)
 
     else direction == "horizontal"
 
-        Nx, Nz = 20,  1
+        Nx, Nz = 20,  2
         Lx, Lz = 1.0, 1.0
         
     end
@@ -37,7 +37,7 @@ function shock_tube(direction::String)
     end
     
     
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 1/Np, "dt0" => 0.1, "t_end" => 0.2)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 0.002, "t_end" => 20.0)
     solver = Solver(app, mesh, params)
     
     
@@ -47,6 +47,9 @@ function shock_tube(direction::String)
     state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
     prim_l = [1.0;   0.0; 0.0; 1.0]
     prim_r = [0.125; 0.0; 0.0; 0.1]
+    
+    prim_r .= prim_l
+
     cons_l = prim_to_prog(app, prim_l, zeros(Float64, app.num_state_auxiliary))
     cons_r = prim_to_prog(app, prim_r, zeros(Float64, app.num_state_auxiliary))
     
@@ -68,18 +71,18 @@ function shock_tube(direction::String)
     init_state!(app, mesh, state_prognostic_0, shock_tube_func)
     set_init_state!(solver, state_prognostic_0)
     
-    # visual(mesh, state_prognostic_0[:,1,:], "Sod_init_"*direction*".png")
+    visual(mesh, state_prognostic_0[:,1,:], "Sod_init_"*direction*".png")
     
     
     Q = solve!(solver)
     
     
-    visual(mesh, Q[:,1,:], "Sod_init_"*direction*".png")
+    visual(mesh, Q[:,1,:], "Sod_end_"*direction*".png")
     
     
 end
 
 
-shock_tube("vertical")
+# shock_tube("vertical")
 
 shock_tube("horizontal")

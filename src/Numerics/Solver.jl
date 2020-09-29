@@ -119,7 +119,9 @@ function solve!(solver::Solver)
     cfl_dt0 = compute_cfl_dt(solver.app, solver.mesh, Q, Q_aux, cfl)
 
     dt = min(dt0, cfl_dt0)
-    
+
+    @info "dt , dt0, cfl_dt0 = ", dt , dt0, cfl_dt0
+
     ite = 0
 
     while t < t_end
