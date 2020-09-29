@@ -37,7 +37,7 @@ function shock_tube(direction::String)
     end
     
     
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 0.002, "t_end" => 20.0)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 0.02, "t_end" => 0.2000)
     solver = Solver(app, mesh, params)
     
     
@@ -52,6 +52,8 @@ function shock_tube(direction::String)
 
     cons_l = prim_to_prog(app, prim_l, zeros(Float64, app.num_state_auxiliary))
     cons_r = prim_to_prog(app, prim_r, zeros(Float64, app.num_state_auxiliary))
+
+
     
     function shock_tube_func(x::Float64, z::Float64)
         if direction == "vertical"
@@ -83,6 +85,6 @@ function shock_tube(direction::String)
 end
 
 
-# shock_tube("vertical")
+shock_tube("vertical")
 
-shock_tube("horizontal")
+# shock_tube("horizontal")

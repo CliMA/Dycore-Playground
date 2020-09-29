@@ -208,7 +208,6 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     @show "horizontal_interface_tendency! ", norm(dQ)
     
     state_primitive = solver.state_primitive
-
     prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
     vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_surf_v, dQ)
 

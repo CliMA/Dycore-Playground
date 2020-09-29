@@ -132,7 +132,7 @@ function prog_to_prim!(app::DryEuler, state_prognostic::Array{Float64, 3}, state
     # state_primitive = size(Nl, num_state_prognostic, Nz+1)
     for il = 1:size(state_prognostic, 1)
         for iz = 1:size(state_prognostic, 3)
-            state_primitive[il, :, iz] .= prim_to_prog(app, state_prognostic[il, :, iz], state_auxiliary[il, :, iz])
+            state_primitive[il, :, iz] .= prog_to_prim(app, state_prognostic[il, :, iz], state_auxiliary[il, :, iz])
         end
     end
 end
