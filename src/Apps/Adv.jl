@@ -63,6 +63,22 @@ function source(app::Adv, state_prognostic::Array{Float64, 1}, state_auxiliary::
 end
 
 
+# initialize 
+function init_state!(app::Adv, mesh::Mesh, state_prognostic::Array{Float64, 3}, func::Function)
+
+    Nl, num_state_prognostic, nelem = size(state_prognostic)
+    vol_l_geo = mesh.vol_l_geo
+    
+    for e = 1:nelem
+        for il = 1:Nl
+
+            x, z = vol_l_geo[1:2, il, e]
+            
+            state_prognostic[il, 1, e] = func(x, z)
+        end
+    end
+end
+
 function init_state_auxiliary!(app::Adv, mesh::Mesh, 
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
