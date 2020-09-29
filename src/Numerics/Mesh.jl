@@ -353,6 +353,26 @@ function compute_geometry(topology::Array{Float64, 3},
 end
 
 
+
+"""
+state is a (Float64, Nl, nelem)
+"""
+function visual(mesh::Mesh, state::Array{Float64, 2})
+
+    Nx, Ny, Nl = mesh.Nx, mesh.Ny, mesh.Nl
+    vol_l_geo = mesh.vol_l_geo
+
+    # x1, x2, M
+    x, z = reshape(vol_l_geo[1,:,:], (Nl * Nx, Ny)) , reshape(vol_l_geo[2,:,:], (Nl * Nx, Ny)) 
+    data = reshape(state, (Nl * Nx, Ny))
+    
+    
+    pcolormesh(x, z, data, shading = "gouraud", cmap = "jet")
+
+end
+
+
+
 function Mesh_test()
     Np = 4
     Nl = Np+1
@@ -442,12 +462,12 @@ function Mesh_test()
         end
        
         @info "left/right edge norm is ", vedge_l_ref - vedge_l, -vedge_l_ref - vedge_r
-
-
-
-
         
     end
 end
+
+
+
+
 
 # Mesh_test()

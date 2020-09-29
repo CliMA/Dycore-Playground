@@ -1,23 +1,31 @@
-mutable struct DryEuler
+mutable struct DryEuler <: Application
     num_state_prognostic::Int64
     num_state_diagnostic::Int64
     num_state_auxiliary::Int64
     
     bc_bottom_type::String
     bc_top_type::String
+
+ 
+
     g::Float64
     γ::Float64
     Rd::Float64
     MSLP::Float64
 end
 
-function DryEuler(bc_bottom_type::String, bc_top_type::String)
+function DryEuler(bc_bottom_type::String, bc_top_type::String, gravity::Bool)
     num_state_prognostic = 4
     num_state_diagnostic = 4
     num_state_auxiliary = 3
 
     # constant
-    g = 9.8
+    if gravity == false
+        g = 0.0
+    else
+        g = 9.8
+    end
+
     γ = 1.4
     Rd = 287.058
     MSLP = 1.01325e5
@@ -52,10 +60,27 @@ function total_specific_enthalpy(app::DryEuler, ρe::Float64, ρ::Float64, p::Fl
     return (ρe + p)/ρ
 end
 
+function compute_wave_speed(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
+    # c + |u|
+    dim = 2
+    ρ, ρu, ρe = state_prognostic[1], state_prognostic[2:dim+1], state_prognostic[dim+2]
+    Φ = state_auxiliary[1]
+    
+    u = ρu/ρ
+    e_int = internal_energy(app, ρ, ρu, ρe, Φ)
+    p = air_pressure(app, ρ,  e_int)
+
+    c = soundspeed_air(app, ρ,  p)
+
+    return c + sqrt(u[1]^2 + u[2]^2)
+
+
+end
+
 
 function prog_to_prim(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     dim = 2
-    γ = app.γ
+
     ρ, ρu, ρe = state_prognostic[1], state_prognostic[2:dim+1], state_prognostic[dim+2]
     Φ = state_auxiliary[1]
     
@@ -78,7 +103,7 @@ function prim_to_prog(app::DryEuler, state_primitive::Array{Float64, 1}, state_a
     return [ρ; ρu; ρe]
 end
 
-function flux_first_order!(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
+function flux_first_order(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     
     dim = 2
     ρ, ρu, ρe = state_prognostic[1], state_prognostic[2:dim+1], state_prognostic[dim+2]
@@ -92,7 +117,7 @@ function flux_first_order!(app::DryEuler, state_prognostic::Array{Float64, 1}, s
 end
 
 
-function flux_first_order!(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, p::Float64)
+function flux_first_order(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, p::Float64)
     
     
     u = ρu/ρ
@@ -106,12 +131,11 @@ function flux_first_order!(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρ
 end
 
 
-
+# Roe flux
 roe_average(sqrt_ρ, var⁻, var⁺) =
 (var⁻ .+ sqrt_ρ * var⁺) / (1.0 + sqrt_ρ)
 
-# Roe flux
-function numerical_flux_first_order!(app::DryEuler, 
+function numerical_flux_first_order(app::DryEuler, 
     state_prognostic⁻::Array{Float64, 1}, state_auxiliary⁻::Array{Float64, 1},
     state_prognostic⁺::Array{Float64, 1}, state_auxiliary⁺::Array{Float64, 1},
     n::Array{Float64, 1})
@@ -139,11 +163,8 @@ function numerical_flux_first_order!(app::DryEuler,
     a⁺ = soundspeed_air(app, ρ⁺,  p⁺)
     h⁺ = total_specific_enthalpy(app, ρe⁺, ρ⁺,  p⁺)
     
-    
-    
     flux⁻ = flux_first_order!(app, ρ⁻, ρu⁻, ρe⁻, p⁻) * n_ij
     flux⁺ = flux_first_order!(app, ρ⁺, ρu⁺, ρe⁺, p⁺) * n_ij
-    
     
     un⁻= u⁻' * n_ij
     ut⁻= u⁻' * t_ij
@@ -153,8 +174,6 @@ function numerical_flux_first_order!(app::DryEuler,
     un⁺ = u⁺' * n_ij
     ut⁺ = u⁺' * t_ij
     
-    
-    
     # compute the Roe-averaged quatities
     sqrt_ρ = sqrt(ρ⁺ / ρ⁻)
     ρ_rl = sqrt_ρ * ρ⁻
@@ -162,8 +181,6 @@ function numerical_flux_first_order!(app::DryEuler,
     h_rl = roe_average(sqrt_ρ, h⁻, h⁺)
     un_rl = roe_average(sqrt_ρ, un⁻, un⁺)
     ut_rl = roe_average(sqrt_ρ, ut⁻, ut⁺)
-    
-    
     
     # Todo this is different with CliMA
     a_rl = sqrt((γ - 1) * (h_rl - 0.5 * (u_rl[1]^2 + u_rl[2]^2 ) - Φ))
@@ -207,31 +224,34 @@ function wall_flux(app::DryEuler,
     e_int = internal_energy(app, ρ, ρu, ρe, Φ)
     p = air_pressure(app, ρ,  e_int)
     
-    
     return [0.0, p * n[1] , p * n[2], 0.0]
+end
+
+
+function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     
+    return zeros(Float64, app.num_state_prognostic)
 end
 
 
 # The auxiliary state has Φ and ∇Φ
 function init_state_auxiliary!(app::DryEuler, mesh::Mesh, 
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
-    state_auxiliary_surf_h::Array{Float64, 3}, state_auxiliary_surf_v::Array{Float64, 3})
-    
+    state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
     
     vol_l_geo, vol_q_geo, sgeo_h, sgeo_v = mesh.vol_l_geo, mesh.vol_q_geo, mesh.sgeo_h, mesh.sgeo_v
   
     g = app.g
     topology_type = mesh.topology_type
     
-    if topology_type == "AtmosLES"
+    if topology_type == "AtmoLES"
         
         x, z = vol_l_geo[1, :, :], vol_l_geo[2, :, :]
         state_auxiliary_vol_l[:, 1, :]  = g*z
         state_auxiliary_vol_l[:, 2, :] .= 0.0
         state_auxiliary_vol_l[:, 3, :] .= g
         
-        x, z = vol_q_geo[6, :, :], vol_l_geo[7, :, :]
+        x, z = vol_q_geo[6, :, :], vol_q_geo[7, :, :]
         state_auxiliary_vol_q[:, 1, :]  = g*z
         state_auxiliary_vol_q[:, 2, :] .= 0.0
         state_auxiliary_vol_q[:, 3, :] .= g
@@ -246,7 +266,7 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
         state_auxiliary_surf_v[:, 2, :, :] .= 0.0
         state_auxiliary_surf_v[:, 3, :, :] .= g
         
-    elseif topology_type == "AtmosGCM"
+    elseif topology_type == "AtmoGCM"
         # The center is at [0, 0]
         
         x, z = vol_l_geo[1, :, :], vol_l_geo[2, :, :]
@@ -273,7 +293,6 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
         state_auxiliary_surf_v[:, 2, :, :] .= g * x./r
         state_auxiliary_surf_v[:, 3, :, :] .= g * z./r
         
-        
     else
         error("topology_type : ", topology_type, " has not implemented")
     end
@@ -284,10 +303,8 @@ end
 
 
 #################################################################################################
-
-
-function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}
-    T_virt_surf, T_min_ref, H_t)
+function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3},
+    T_virt_surf::Float64, T_min_ref::Float64, H_t::Float64)
 
     profile = DecayingTemperatureProfile(app, T_virt_surf, T_min_ref, H_t)
     γ = app.γ
@@ -299,10 +316,10 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
     for e = 1:nelem
         for il = 1:Nl
 
-            x, z = vol_l_geo[:, il, e]
-            if topology_type == "AtmosLES"
+            x, z = vol_l_geo[1:2, il, e]
+            if topology_type == "AtmoLES"
                 alt = z
-            else if topology_type == "AtmosGCM"
+            elseif topology_type == "AtmoGCM"
                 alt = sqrt(x^2 + z^2) - topology_size[1]
             else 
                 error("topology_type : ", topology_type, " has not implemented yet.")
@@ -313,6 +330,22 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
             ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
             
             state_prognostic[il, :, e] .= [ρ ; ρu ; ρe]
+        end
+    end
+end
+
+# initialize 
+function init_state!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, func::Function)
+
+    Nl, num_state_prognostic, nelem = size(state_prognostic)
+    vol_l_geo = mesh.vol_l_geo
+    
+    for e = 1:nelem
+        for il = 1:Nl
+
+            x, z = vol_l_geo[1:2, il, e]
+            
+            state_prognostic[il, :, e] .= func(x, z)
         end
     end
 end

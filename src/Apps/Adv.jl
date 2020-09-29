@@ -28,7 +28,7 @@ function Adv(bc_bottom_type::String, bc_top_type::String, u::Float64, w::Float64
     u, w, α)
 end
 
-function compute_wave_speed(app::Adv, state_prognostic::Array{Float64, 1})
+function compute_wave_speed(app::Adv, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     return sqrt(app.u^2 + app.w^2)
 end
 
@@ -65,6 +65,6 @@ end
 
 function init_state_auxiliary!(app::Adv, mesh::Mesh, 
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
-    state_auxiliary_surf_h::Array{Float64, 3}, state_auxiliary_surf_v::Array{Float64, 3})
+    state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
     
 end
