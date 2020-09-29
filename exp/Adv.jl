@@ -40,5 +40,7 @@ set_init_state!(solver, state_prognostic_0)
 
 Q = solve!(solver)
 
+visual(mesh, Q[:,1,:])
+
 
 

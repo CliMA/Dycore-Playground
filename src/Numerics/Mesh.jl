@@ -1,5 +1,6 @@
 include("Elements.jl")
 include("Topology.jl")
+import PyPlot
 # structure mesh
 
 #=
@@ -357,19 +358,31 @@ end
 """
 state is a (Float64, Nl, nelem)
 """
-function visual(mesh::Mesh, state::Array{Float64, 2})
+function visual(mesh::Mesh, state::Array{Float64, 2}, save_file_name::String="None")
 
-    Nx, Ny, Nl = mesh.Nx, mesh.Ny, mesh.Nl
+    Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
     vol_l_geo = mesh.vol_l_geo
 
     # x1, x2, M
-    x, z = reshape(vol_l_geo[1,:,:], (Nl * Nx, Ny)) , reshape(vol_l_geo[2,:,:], (Nl * Nx, Ny)) 
-    data = reshape(state, (Nl * Nx, Ny))
+    x, z = reshape(vol_l_geo[1,:,:], (Nl * Nx, Nz)) , reshape(vol_l_geo[2,:,:], (Nl * Nx, Nz)) 
+    data = reshape(state, (Nl * Nx, Nz))
     
     
-    pcolormesh(x, z, data, shading = "gouraud", cmap = "jet")
+    PyPlot.pcolormesh(x, z, data, shading = "gouraud", cmap = "jet")
+    PyPlot.colorbar()
+    PyPlot.axis("equal")
+    if save_file_name != "None"
+
+        PyPlot.savefig(save_file_name)
+        PyPlot.close("all")
+    end
+        
 
 end
+
+
+
+
 
 
 

@@ -24,9 +24,6 @@ app = DryEuler("periodic", "periodic", gravity)
 
 
 
-
-
-
 params = Dict("Time_Integrator" => "RK2", "cfl" => -1.0, "dt0" => -1.0, "t_end" => 10.0)
 solver = Solver(app, mesh, state_prognostic_0, params)
 
