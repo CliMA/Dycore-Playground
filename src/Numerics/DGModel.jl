@@ -92,8 +92,9 @@ function horizontal_interface_tendency!(
             
             (n1, n2, sM) = sgeo_h[:, 1, end, e⁻] 
             
+            # todo local_aux⁻ ,  local_aux⁺ in the boundary 
             local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [n1;n2])
-            @warning("local_aux")
+            
             tendency[1,   :, e⁺] .+= sM * local_flux
             tendency[end, :, e⁻] .-= sM * local_flux
             
@@ -209,7 +210,18 @@ end
 #     end
 # end
 
+function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
+    Δ = zeros(size(Δ⁻))
+    num_state = length(Δ⁻)
+    for s = 1:num_state
+        if Δ⁺[s] *  Δ⁻[s] > 0.0
+            Δ[s] = Δ⁺[s] *  Δ⁻[s]/ (Δ⁺[s] + Δ⁻[s])
+        end
+    end
 
+    return Δ
+
+end
 
 
 #ghost cell, reconstruction for primitive variables
@@ -219,76 +231,109 @@ end
 function vertical_interface_tendency!(
     app::Application,
     mesh::Mesh,
-    state_prognostic::Array{Float64, 3},
     state_primitive::Array{Float64, 3},
     state_auxiliary_surf_v::Array{Float64,4},
     tendency::Array{Float64, 3}
     )
-    
+    dim = 2
     sgeo_v = mesh.sgeo_v
-    bc_bottom_type, bc_top_type = mesh.bc_bottom_type, mesh.bc_top_type
+    bc_bottom_type, bc_top_type = app.bc_bottom_type, app.bc_top_type
     
-    state_primitive_face⁺ = zeros(Float64, num_state_prognostic, Nz+1)
-    state_primitive_face⁻ = zeros(Float64, num_state_prognostic, Nz+1)
-    ghost_state⁻ = zeros(Float64, num_state_prognostic)
+    state_primitive_face⁺  = zeros(Float64, num_state_prognostic, Nz+1)
+    state_primitive_face⁻  = zeros(Float64, num_state_prognostic, Nz+1)
+    state_prognostic_face⁺ = zeros(Float64, num_state_prognostic, Nz+1)
+    state_prognostic_face⁻ = zeros(Float64, num_state_prognostic, Nz+1)
     ghost_state⁺ = zeros(Float64, num_state_prognostic)
+    ghost_state⁻ = zeros(Float64, num_state_prognostic)
+    
     
     for ix = 1:Nx
         for il = 1:Nl
+            # single colume treatment 
+
+
+            ##########
+            #  reconstruct interface states by looping each cell, construct the bottom and top states
             Δzc_col = @view mesh.Δzc[il, ix, :]
             state_primitive_col = @view state_primitive[il, : , ix:Nx:end]
             
-            # reconstruct interface states by looping each cell, construct the bottom and top states
+            # populate bottom ghost state
             if bc_bottom_type == "periodic"
                 ghost_state⁻ .= state_primitive_col[:, Nz]
                 ghost_Δz⁻ = Δzc_col[Nz]
             elseif bc_bottom_type == "no-slip"
-                ghost_state⁻ .= state_primitive_col[:, 1]
+                ghost_state⁻ .= [state_primitive_col[1, 1]; -state_primitive_col[2, 1] ; -state_primitive_col[2, 1] ; state_primitive_col[dim+2, 1]]
                 ghost_Δz⁻ = Δzc_col[1]
             else
                 error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
             end
             
+            # populate top ghost state
             if bc_top_type == "periodic"
                 ghost_state⁺ .= state_primitive_col[:, 1]
                 ghost_Δz⁺ = Δzc_col[1]
             elseif bc_top_type == "no-slip"
-                ghost_state⁺ .= state_primitive_col[:, Nz]
+                ghost_state⁺ .= [state_primitive_col[1, Nz]; -state_primitive_col[2, Nz] ; -state_primitive_col[2, Nz] ; state_primitive_col[dim+2, Nz]]
                 ghost_Δz⁺ = Δzc_col[Nz]
             else
                 error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
             end
-            
+
+            ##########################################################################################################
+            # compute face states by looping cells
             for iz = 1:Nz
                 Δstate⁺ = (iz==Nz ? ghost_state⁺ : state_primitive_col[:, iz+1]) - state_primitive_col[:, iz]
                 Δstate⁻ = state_primitive_col[:, iz]   - (iz==1 ? ghost_state⁻ : state_primitive_col[:, iz-1])
-                Δz⁺ = ((iz==Nz ? ghost_Δz⁺ : Δzc[iz+1]) + Δzc[iz])/2.0
-                Δz⁻ = (Δzc[iz] + (iz==1 ? ghost_Δz⁺ : Δzc[iz-1]))/2.0
+                Δz⁺ = ((iz==Nz ? ghost_Δz⁺ : Δzc_col[iz+1]) + Δzc_col[iz])/2.0
+                Δz⁻ = (Δzc_col[iz] + (iz==1 ? ghost_Δz⁻ : Δzc_col[iz-1]))/2.0
                 
-                ∂state = limiter(Δstate⁺/Δz⁺, Δstate⁻/Δz⁻)
-                state_primitive_face⁺[:, iz]   = state_primitive_col[:, iz] - ∂state * Δzc[iz]/2.0
-                state_primitive_face⁻[:, iz+1] = state_primitive_col[:, iz] + ∂state * Δzc[iz]/2.0
+                ∂state = limiter(Δstate⁻/Δz⁻, Δstate⁺/Δz⁺)
+                state_primitive_face⁺[:, iz]   = state_primitive_col[:, iz] - ∂state * Δzc_col[iz]/2.0
+                state_primitive_face⁻[:, iz+1] = state_primitive_col[:, iz] + ∂state * Δzc_col[iz]/2.0
+            end
+
+            if bc_bottom_type == "periodic"
+                state_primitive_face⁻[:, 1] .=  state_primitive_face⁻[:, Nz+1]
+            else
+                # should not use it 
+                state_primitive_face⁻[:, 1] .= NaN64
             end
             
-            
+            if bc_top_type == "periodic"
+                
+                state_primitive_face⁺[:, Nz+1] .= state_primitive_face⁺[:, 1] 
+            else
+                # should not use it 
+                state_primitive_face⁺[:, Nz+1] .= NaN64
+            end
+
+
+
+            prim_to_prog!(app, state_primitive_face⁻, state_prognostic_face⁻)
+            prim_to_prog!(app, state_primitive_face⁺, state_prognostic_face⁺)
+
+            ##########################################################################################################
+            # compute face flux 
+
+
+
             # loop face 
             for iz = 1:Nz+1
-                # bottom cell iz-1 ; top cell is iz
-                
+                # face iz ;  bottom cell iz-1 ; top cell is iz
                 # bottom 
                 if iz == 1
-                    e⁺ =  ix + (Nz-1)*Nx
+                    e⁺ =  ix + (iz-1)*Nx
                     local_aux⁺ = state_auxiliary_surf_v[il, :,  1, e⁺]
                     
                     (n1, n2, sM) = sgeo_v[:, il, 1, e⁺] 
                     # the normal points from e⁻ to e⁺
                     n1, n2 = -n1, -n2
                     if bc_bottom_type == "periodic"
-                        
-                        local_flux = numerical_flux_first_order_primitive(app, state_primitive_face⁻[:, iz], local_aux⁺, state_primitive_face⁺[:, iz], local_aux⁺, [n1;n2])
+                        # use the auxiliary state in  local_aux⁺
+                        local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁺, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     elseif bc_bottom_type == "no-slip"
                         
-                        local_flux = wall_flux_first_order_primitive(app, state_primitive_face⁻[:, iz], local_aux⁺, [n1;n2])
+                        local_flux = wall_flux_first_order(app, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
                     end
@@ -301,12 +346,12 @@ function vertical_interface_tendency!(
                     local_aux⁻ = state_auxiliary_surf_v[il, :,  end, e⁻] 
                     (n1, n2, sM) = sgeo_v[:, il, end, e⁻] 
                     if bc_bottom_type == "periodic"
-                        
-                        local_flux = numerical_flux_first_order_primitive(app, state_primitive_face⁺[:, iz], local_aux⁺, state_primitive_face⁺[:, iz], local_aux⁺, [n1;n2])
+                        # use the auxiliary state in  local_aux⁻
+                        local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
                         
                     elseif bc_top_type == "no-slip"
 
-                        local_flux = wall_flux_first_order_primitive(app, state_primitive_face⁺[:, iz], local_aux⁺, [n1;n2])
+                        local_flux = wall_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, [n1;n2])
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
                     end
@@ -322,7 +367,7 @@ function vertical_interface_tendency!(
                     
                     (n1, n2, sM) = sgeo_v[:, il, end, e⁻] 
                     
-                    local_flux = numerical_flux_first_order_primitive(app, state_primitive_face⁻[iz], local_aux⁻, state_primitive_face⁺[iz], local_aux⁺, [n1;n2])
+                    local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux

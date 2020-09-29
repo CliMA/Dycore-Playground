@@ -108,7 +108,7 @@ function Mesh(Nx::Int64, Nz::Int64, Nl::Int64, Nq::Int64, topology_type::String,
 
     (vol_l_geo, vol_q_geo, sgeo_h, sgeo_v) = compute_geometry(topology, ωl, ωq, Dl_l, ϕl_q, Dl_q)
 
-    Δzc = compute_vertical_mesh_size(Nx, Nz, vol_l_geo)
+    Δzc = compute_vertical_mesh_size(Nx, Nz, sgeo_v)
 
     Δs_min = compute_min_nodal_dist(Nx, Nz, vol_l_geo)
     
@@ -117,23 +117,26 @@ function Mesh(Nx::Int64, Nz::Int64, Nl::Int64, Nq::Int64, topology_type::String,
          ξl, ωl, Dl_l, ξq, ωq, ϕl_q, Dl_q, vol_l_geo, vol_q_geo, sgeo_h, sgeo_v)
 end
 
-function compute_vertical_mesh_size(Nx::Int64, Nz::Int64, vol_l_geo::Array{Float64, 3})
+function compute_vertical_mesh_size(Nx::Int64, Nz::Int64, sgeo_v::Array{Float64, 4})
     
-    _, Nl, nelem = size(vol_l_geo)
+    # sgeo = (_nsgeo=3, Nl, nface=2, nelem) for vertical flux (bottom and top faces)
+    # n1, n2, sM, x1, x2
+    sgeo_v::Array{Float64, 4}
+    
+    _nsgeo, Nl, nface, nelem = size(sgeo_v)
 
-    Δzc = zeros(2, Nl, Nx, Nz)
+    Δzc = zeros(Float64, Nl, Nx, Nz)
     
     # horizontal direction
     for ix = 1:Nx
         for iz = 1:Nz
-
             e  = ix + (iz-1)*Nx
 
             for il = 1:Nl
     
-                x , z  = vol_l_geo[1:2, il, e]
-                x⁺, z⁺ = vol_l_geo[1:2, il, e⁺]   
-                Δz = sqrt((x⁺ - x)^2 + (z⁺ - z)^2)
+                x⁻, z⁻ = sgeo_v[4:5, il, 1, e]
+                x⁺, z⁺ = sgeo_v[4:5, il, 2, e]   
+                Δz = sqrt((x⁺ - x⁻)^2 + (z⁺ - z⁻)^2)
                 Δzc[il, ix, iz] = Δz
                                 
             end

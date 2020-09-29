@@ -40,6 +40,16 @@ function prim_to_prog(app::Adv, state_primitive::Array{Float64, 1}, state_auxili
     return state_primitive
 end
 
+function prim_to_prog!(app::Adv, state_primitive::Array{Float64, 2}, state_prognostic::Array{Float64, 2})
+    state_prognostic .= state_primitive 
+end
+
+function prog_to_prim!(app::Adv, state_prognostic::Array{Float64, 3}, state_primitive::Array{Float64, 3})
+    state_primitive .= state_prognostic
+end
+
+
+
 function flux_first_order(app::Adv, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     
     return [state_prognostic*app.u  state_prognostic*app.w]

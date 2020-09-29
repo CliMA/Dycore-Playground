@@ -28,9 +28,9 @@ solver = Solver(app, mesh, params)
 num_state_prognostic, nelem = app.num_state_prognostic, Nx*Nz
 
 
-state_prognostic_0 = zeros(Nl, num_state_prognostic, nelem)
-const_func = (x::Float64, z::Float64) -> 1.0
+state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
 
+const_func = (x::Float64, z::Float64) -> 1.0
 function square_2d_func(x::Float64, z::Float64)
     @info x, z
     if (x > -Lx/6.0 && x < Lx/6.0) && (z > Lz/3.0 && z < 2.0*Lz/3.0)
@@ -39,8 +39,8 @@ function square_2d_func(x::Float64, z::Float64)
         return 0.0
     end
 end
-
 init_state!(app, mesh, state_prognostic_0, square_2d_func)
+
 set_init_state!(solver, state_prognostic_0)
 
 visual(mesh, state_prognostic_0[:,1,:], "Adv_init.png")
