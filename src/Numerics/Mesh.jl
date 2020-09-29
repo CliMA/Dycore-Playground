@@ -404,7 +404,7 @@ function Mesh_test()
             Lx, Lz = 2.0, 2.0
             topology_size = [Lx, Lz]
             
-            topology = Topology(Nl, Nx, Nz, Lx, Lz)
+            topology = topology_les(Nl, Nx, Nz, Lx, Lz)
             S_ref = Lx*Lz
             vedge_l_ref = Lz*[-1.0; 0.0]
 
@@ -413,7 +413,7 @@ function Mesh_test()
             r, R = 2.0, 4.0
             topology_size = [r, R]
 
-            topology = ArchTopology(Nl, Nx, Nz, r, R)
+            topology = topology_gcm(Nl, Nx, Nz, r, R)
             S_ref = π*(R^2 - r^2)
             vedge_l_ref = (R - r)*[0.0; 1.0]
             

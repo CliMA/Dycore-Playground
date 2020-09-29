@@ -13,7 +13,7 @@ Lx, Lz = 1.0, 1.0
 
 topology_type = "AtmoLES"
 topology_size = [Lx; Lz]
-topology = Topology(Nl, Nx, Nz, Lx, Lz)
+topology = topology_les(Nl, Nx, Nz, Lx, Lz)
 
 
 

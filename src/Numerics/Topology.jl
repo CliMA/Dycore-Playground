@@ -7,7 +7,7 @@ Nz: vertical element number
 
 The unwraped domain is (x, z) ∈ [-Lx/2, Lx/2]×[0, Ly]
 """
-function Topology(Nl::Int64, Nx::Int64, Nz::Int64, Lx::Float64, Lz::Float64, 
+function topology_les(Nl::Int64, Nx::Int64, Nz::Int64, Lx::Float64, Lz::Float64, 
     xx = Array(LinRange(-Lx/2.0, Lx/2.0, Nx+1))::Array{Float64, 1},  zz=Array(LinRange(0, Lz, Nz+1))::Array{Float64, 1})
     
     dim = 2
@@ -44,7 +44,7 @@ Nz: vertical element number
 
 The unwraped domain is (r, θ) ∈ [r, R]×[0, 2π]
 """
-function ArchTopology(Nl::Int64, Nx::Int64, Nz::Int64, r::Float64, R::Float64, 
+function topology_gcm(Nl::Int64, Nx::Int64, Nz::Int64, r::Float64, R::Float64, 
          rr = Array(LinRange(r, R,  Nz+1))::Array{Float64, 1},
          θθ = Array(LinRange(0, -2π, Nx+1))::Array{Float64, 1})
     # The unwraped domain is [-Lx/2, Lx/2]×[0, Ly], the mesh is uniform in the horizontal direction
