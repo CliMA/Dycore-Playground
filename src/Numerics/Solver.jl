@@ -57,7 +57,7 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     Q1 = zeros(Float64, Nl, num_state_prognostic, nelem)
 
     # reconstruction state variables
-    state_primitive  = zeros(Float64, Nl, num_state_diagnostic, nelem)
+    state_primitive  = zeros(Float64, Nl, num_state_prognostic, nelem)
 
     state_diagnostic = zeros(Float64, Nl, num_state_diagnostic, nelem)
     
@@ -79,7 +79,7 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     k3 = zeros(Float64, Nl, num_state_prognostic, nelem)
     k4 = zeros(Float64, Nl, num_state_prognostic, nelem)
     
-    time_integrator =  params["Time_Integrator"]
+    time_integrator =  params["time_integrator"]
     cfl_freqency = params["cfl_freqency"]
     cfl = params["cfl"]
     dt0 = params["dt0"]
@@ -206,7 +206,8 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     @show "horizontal_interface_tendency! ", norm(dQ)
     
     state_primitive = solver.state_primitive
-    prog_to_prim!(app, Q,  state_primitive)
+
+    prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
     vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_surf_v, dQ)
 
 

@@ -15,6 +15,7 @@ function horizontal_volume_tendency!(
     # Each element has Nl Gauss-Legendre-Lobatto points(basis), 
     # and Nq quadrature points
     
+    Nq , Nl, Nx, Nz = mesh.Nq, mesh.Nl, mesh.Nx, mesh.Nz
     num_state_prognostic = app.num_state_prognostic
     dim, vol_q_geo, ϕl_q, Dl_q = mesh.dim, mesh.vol_q_geo, mesh.ϕl_q, mesh.Dl_q
     
@@ -75,6 +76,7 @@ function horizontal_interface_tendency!(
     tendency::Array{Float64, 3}
     ) 
     
+    Nx, Nz = mesh.Nx, mesh.Nz
     bc_left_type, bc_left_data = app.bc_left_type, app.bc_left_data
     bc_right_type, bc_right_data = app.bc_left_type, app.bc_right_data
     
@@ -176,7 +178,9 @@ function vertical_interface_tendency!(
     )
     dim = 2
     sgeo_v = mesh.sgeo_v
-    
+    Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
+    num_state_prognostic = app.num_state_prognostic
+
     bc_bottom_type, bc_bottom_data = app.bc_bottom_type, app.bc_bottom_data
     bc_top_type, bc_top_data = app.bc_top_type, app.bc_top_data
     
@@ -250,10 +254,12 @@ function vertical_interface_tendency!(
             end
             
             
-            
-            prim_to_prog!(app, state_primitive_face⁻, state_prognostic_face⁻)
-            prim_to_prog!(app, state_primitive_face⁺, state_prognostic_face⁺)
-            
+            for iz = 1:Nz+1
+                e⁺ =  ix + (iz-1)*Nx
+                loc_aux = (iz == Nz+1 ? state_auxiliary_surf_v[il, :,  end, ix + (iz-2)*Nx] : state_auxiliary_surf_v[il, :,  1, e⁺])
+                state_primitive_face⁻[:,iz] = prim_to_prog(app, state_primitive_face⁻[:,iz], loc_aux)
+                state_primitive_face⁺[:,iz] = prim_to_prog(app, state_primitive_face⁺[:,iz], loc_aux)
+            end
             ##########################################################################################################
             # compute face flux 
             
@@ -332,6 +338,7 @@ function source_tendency!(
     )   
     
     vol_l_geo = mesh.vol_l_geo
+    Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
     for iz = 1:Nz
         for ix = 1:Nx
             e = ix + (iz-1)*Nx

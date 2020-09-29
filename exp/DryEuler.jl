@@ -23,7 +23,7 @@ app = DryEuler("periodic", "periodic", gravity)
 
 
 
-params = Dict("Time_Integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 1/Np, "dt0" => 0.1, "t_end" => 0.2)
+params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 1/Np, "dt0" => 0.1, "t_end" => 0.2)
 solver = Solver(app, mesh, params)
 
 
@@ -48,7 +48,7 @@ end
 init_state!(app, mesh, state_prognostic_0, shock_tube_func)
 set_init_state!(solver, state_prognostic_0)
 
-visual(mesh, state_prognostic_0[:,1,:], "Sod_init.png")
+# visual(mesh, state_prognostic_0[:,1,:], "Sod_init.png")
 
 
 Q = solve!(solver)

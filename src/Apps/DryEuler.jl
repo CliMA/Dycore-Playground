@@ -4,34 +4,51 @@ mutable struct DryEuler <: Application
     num_state_auxiliary::Int64
     
     bc_bottom_type::String
+    bc_bottom_data::Union{Array{Float64, 1}, Nothing}
+    
     bc_top_type::String
-
- 
-
+    bc_top_data::Union{Array{Float64, 1}, Nothing}
+    
+    bc_left_type::String
+    bc_left_data::Union{Array{Float64, 1}, Nothing}
+    
+    bc_right_type::String
+    bc_right_data::Union{Array{Float64, 1}, Nothing}
+    
+    
+    
     g::Float64
     γ::Float64
     Rd::Float64
     MSLP::Float64
 end
 
-function DryEuler(bc_bottom_type::String, bc_top_type::String, gravity::Bool)
+function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1}, Nothing},
+    bc_top_type::String,     bc_top_data::Union{Array{Float64, 1}, Nothing},
+    bc_left_type::String,    bc_left_data::Union{Array{Float64, 1}, Nothing},
+    bc_right_type::String,   bc_right_data::Union{Array{Float64, 1}, Nothing},
+    gravity::Bool)
+    
     num_state_prognostic = 4
     num_state_diagnostic = 4
     num_state_auxiliary = 3
-
+    
     # constant
     if gravity == false
         g = 0.0
     else
         g = 9.8
     end
-
+    
     γ = 1.4
     Rd = 287.058
     MSLP = 1.01325e5
     
     DryEuler(num_state_prognostic, num_state_diagnostic, num_state_auxiliary,
-    bc_bottom_type, bc_top_type, 
+    bc_bottom_type, bc_bottom_data,
+    bc_top_type, bc_top_data,
+    bc_left_type, bc_left_data,
+    bc_right_type, bc_right_data,
     g, γ, Rd, MSLP)
 end
 
@@ -69,18 +86,18 @@ function compute_wave_speed(app::DryEuler, state_prognostic::Array{Float64, 1}, 
     u = ρu/ρ
     e_int = internal_energy(app, ρ, ρu, ρe, Φ)
     p = air_pressure(app, ρ,  e_int)
-
+    
     c = soundspeed_air(app, ρ,  p)
-
+    
     return c + sqrt(u[1]^2 + u[2]^2)
-
-
+    
+    
 end
 
 
 function prog_to_prim(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     dim = 2
-
+    
     ρ, ρu, ρe = state_prognostic[1], state_prognostic[2:dim+1], state_prognostic[dim+2]
     Φ = state_auxiliary[1]
     
@@ -101,6 +118,23 @@ function prim_to_prog(app::DryEuler, state_primitive::Array{Float64, 1}, state_a
     ρe = p/(γ-1) + 0.5*(ρu[1]*u[1] + ρu[2]*u[2]) + ρ*Φ
     
     return [ρ; ρu; ρe]
+end
+
+
+# function prim_to_prog!(app::DryEuler, state_primitive::Array{Float64, 2}, state_auxiliary::Array{Float64, 2}, state_prognostic::Array{Float64, 2})
+#     # state_primitive = size(num_state_prognostic, Nz+1)
+#     for iz = 1:size(state_primitive, 2)
+#         state_prognostic[:, iz] .= prim_to_prog(app, state_primitive[:, iz], state_auxiliary[:, iz])
+#     end
+# end
+
+function prog_to_prim!(app::DryEuler, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3}, state_primitive::Array{Float64, 3})
+    # state_primitive = size(Nl, num_state_prognostic, Nz+1)
+    for il = 1:size(state_prognostic, 1)
+        for iz = 1:size(state_prognostic, 3)
+            state_primitive[il, :, iz] .= prim_to_prog(app, state_prognostic[il, :, iz], state_auxiliary[il, :, iz])
+        end
+    end
 end
 
 function flux_first_order(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
@@ -212,7 +246,7 @@ end
 # Wall Flux
 # Primitive state variable vector V_i
 # outward wall normal n_i
-function wall_flux(app::DryEuler, 
+function wall_flux_first_order(app::DryEuler, 
     state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1}, 
     n::Array{Float64, 1})
     
@@ -240,7 +274,7 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
     
     vol_l_geo, vol_q_geo, sgeo_h, sgeo_v = mesh.vol_l_geo, mesh.vol_q_geo, mesh.sgeo_h, mesh.sgeo_v
-  
+    
     g = app.g
     topology_type = mesh.topology_type
     
@@ -305,17 +339,17 @@ end
 #################################################################################################
 function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3},
     T_virt_surf::Float64, T_min_ref::Float64, H_t::Float64)
-
+    
     profile = DecayingTemperatureProfile(app, T_virt_surf, T_min_ref, H_t)
     γ = app.γ
     FT = eltype(state)
-
+    
     topology_type = mesh.topology_type
     topology_size = mesh.topology_size
-
+    
     for e = 1:nelem
         for il = 1:Nl
-
+            
             x, z = vol_l_geo[1:2, il, e]
             if topology_type == "AtmoLES"
                 alt = z
@@ -324,7 +358,7 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
             else 
                 error("topology_type : ", topology_type, " has not implemented yet.")
             end
-
+            
             Tv, p, ρ = profile(z)
             ρu = ρ*u_init
             ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
@@ -336,13 +370,13 @@ end
 
 # initialize 
 function init_state!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, func::Function)
-
+    
     Nl, num_state_prognostic, nelem = size(state_prognostic)
     vol_l_geo = mesh.vol_l_geo
-
+    
     for e = 1:nelem
         for il = 1:Nl
-
+            
             x, z = vol_l_geo[1:2, il, e]
             
             state_prognostic[il, :, e] .= func(x, z)

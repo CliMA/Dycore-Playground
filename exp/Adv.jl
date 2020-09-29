@@ -25,7 +25,7 @@ app = Adv("periodic", nothing,  # bottom
           1.0, 1.0)
 
 dt = 0.1
-params = Dict("Time_Integrator" => "RK2", "cfl_freqency" => -1,  "cfl" => 1/Np, "dt0" => dt, "t_end" => 3.0)
+params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1,  "cfl" => 1/Np, "dt0" => dt, "t_end" => 3.0)
 solver = Solver(app, mesh, params)
 
 # initial condition
@@ -36,7 +36,6 @@ state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
 
 const_func = (x::Float64, z::Float64) -> 1.0
 function square_2d_func(x::Float64, z::Float64)
-    @info x, z
     if (x > -Lx/6.0 && x < Lx/6.0) && (z > Lz/3.0 && z < 2.0*Lz/3.0)
         return 1.0
     else
@@ -47,10 +46,12 @@ init_state!(app, mesh, state_prognostic_0, square_2d_func)
 
 set_init_state!(solver, state_prognostic_0)
 
-# visual(mesh, state_prognostic_0[:,1,:], "Adv_init.png")
-
+# visualize the initial condition 
+visual(mesh, state_prognostic_0[:,1,:], "Adv_init.png")
 
 Q = solve!(solver)
+
+# visualize the solution at t_end 
 visual(mesh, Q[:,1,:], "Adv_end.png")
 
 
