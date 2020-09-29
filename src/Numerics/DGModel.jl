@@ -74,14 +74,21 @@ function horizontal_interface_tendency!(
     state_auxiliary_surf_h::Array{Float64,4},
     tendency::Array{Float64, 3}
     ) 
+    
+    bc_left_type, bc_left_data = app.bc_left_type, app.bc_left_data
+    bc_right_type, bc_right_data = app.bc_left_type, app.bc_right_data
+    
     sgeo_h = mesh.sgeo_h
     
     for iz = 1:Nz
-        # Consider the internal face 
-        for ix = 1:Nx
-            e⁺ =   ix + (iz-1)*Nx
-            # periodic boundary condition
+        # Compute the flux on the ix-th face
+        for ix = 1:Nx+1
+            
+            # left and right element in the periodic sense
             e⁻ = mod1(ix - 1, Nx) + (iz-1)*Nx
+            e⁺ = mod1(ix, Nx) + (iz-1)*Nx
+
+            # @show e⁻,  e⁺ 
             
             local_state⁻ = state_prognostic[end, :, e⁻]
             local_state⁺ = state_prognostic[1,   :, e⁺]
@@ -89,126 +96,58 @@ function horizontal_interface_tendency!(
             local_aux⁻ = state_auxiliary_surf_h[1, :, end, e⁻]
             local_aux⁺ = state_auxiliary_surf_h[1, :, 1, e⁺]
             
-            
-            (n1, n2, sM) = sgeo_h[:, 1, end, e⁻] 
-            
-            # todo local_aux⁻ ,  local_aux⁺ in the boundary 
-            local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [n1;n2])
-            
-            tendency[1,   :, e⁺] .+= sM * local_flux
-            tendency[end, :, e⁻] .-= sM * local_flux
-            
-            
+            if ix == 1 # left bc
+                
+                (n1, n2, sM) = sgeo_h[:, 1, 1, e⁺] 
+                # the normal points from e⁻ to e⁺
+                n1, n2 = -n1, -n2
+                
+                if bc_left_type == "periodic"
+                    local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁺, local_state⁺, local_aux⁺, [n1;n2])
+                    
+                elseif bc_left_data == "no-slip"
+                    
+                    local_flux = wall_flux_first_order(app, local_state⁺, local_aux⁺, [n1;n2])
+                       
+                else
+                    error("bc_left_type = ", bc_left_type, " has not implemented")   
+                end
+                
+                tendency[1,   :, e⁺] .+= sM * local_flux
+                
+            elseif ix == Nx + 1 # right bc
+                
+                (n1, n2, sM) = sgeo_h[:, 1, end, e⁻] 
+                
+                if bc_right_type == "periodic"
+                    local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁻, [n1;n2])
+                    
+                elseif bc_right_data == "no-slip"
+                    
+                    local_flux = wall_flux_first_order(app, local_state⁻, local_aux⁻, [n1;n2])
+                    
+                else
+                    error("bc_right_type = ", bc_right_type, " has not implemented") 
+                end
+                
+                tendency[end, :, e⁻] .-= sM * local_flux
+                
+            else
+                (n1, n2, sM) = sgeo_h[:, 1, end, e⁻] 
+                
+                local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [n1;n2])
+                
+                tendency[1,   :, e⁺] .+= sM * local_flux
+                tendency[end, :, e⁻] .-= sM * local_flux
+                
+            end
         end
+
+        # @info tendency[:, 1, :]
+        # error("stop ")
     end
 end
 
-
-
-# #ghost cell, reconstruction for primitive variables
-# function vertical_interface_tendency!(
-#     app::Application,
-#     mesh::Mesh,
-#     state_prognostic::Array{Float64, 3},
-#     state_auxiliary_surf_v::Array{Float64,4},
-#     tendency::Array{Float64, 3}
-#     )
-    
-#     sgeo_v = mesh.sgeo_v
-    
-#     for ix = 1:Nx
-#         for il = 1:Nl
-            
-#             for iz = 1:Nz+1
-                
-#                 # internal faces
-#                 if iz >= 2 && iz <= Nz
-                    
-#                     # top element
-#                     e⁺ =  ix + (iz-1)*Nx
-#                     # bottom element
-#                     e⁻ =  ix + (iz-2)*Nx
-                    
-#                     local_state⁺ = state_prognostic[il, :, e⁺]
-#                     local_state⁻ = state_prognostic[il, :, e⁻]
-                    
-#                     local_aux⁻ = state_auxiliary_surf_v[il, :,  end, e⁻]
-#                     local_aux⁺ = state_auxiliary_surf_v[il, :,  1, e⁺]
-                    
-#                     (n1, n2, sM) = sgeo_v[:, il, end, e⁻] 
-                    
-#                     local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [n1;n2])
-                    
-#                     tendency[il, :,  e⁻]  .-=  sM * local_flux
-#                     tendency[il, :,  e⁺]  .+=  sM * local_flux
-                    
-                    
-#                 else # top and bottom boundary condition
-                    
-                    
-#                     bc_top_type, bc_bottom_type = app.bc_top_type,  app.bc_bottom_type
-#                     # bottom boundary condition
-#                     if iz == 1
-                        
-#                         # top element
-#                         e⁺ =  ix + (iz-1)*Nx
-                        
-#                         local_state⁺ = state_prognostic[il, :, e⁺]
-                        
-#                         (n1, n2, sM) = sgeo_v[:, il, 1, e⁺] 
-                        
-#                         if bc_bottom_type == "periodic"
-#                             e⁻ =  ix + (Nz-1)*Nx
-                            
-#                             local_state⁻ = state_prognostic[il, :, e⁻]
-                            
-#                             local_aux⁻ = state_auxiliary_surf_v[il, :,  end, e⁻]
-#                             local_aux⁺ = state_auxiliary_surf_v[il, :,  1, e⁺]
-                            
-#                             local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [-n1;-n2])
-#                         else
-                            
-#                             error("bc_bottom_type = ", bc_bottom_type, " has not implemented")
-                            
-#                         end
-                        
-                        
-#                         tendency[il, :, e⁺]  .+=  sM * local_flux
-                        
-                        
-#                     else    # top boundary condition
-#                         @assert(iz == Nz + 1)
-                        
-                        
-#                         # bottom element
-#                         e⁻ =  ix + (iz-2)*Nx
-                        
-                        
-#                         local_state⁻ = state_prognostic[il, :, e⁻]
-#                         (n1, n2, sM) = sgeo_v[:, il, end, e⁻] 
-                        
-#                         if bc_top_type == "periodic"
-                            
-#                             e⁺ =  ix
-                            
-#                             local_state⁺ = state_prognostic[il, :, e⁺]
-                            
-#                             local_aux⁻ = state_auxiliary_surf_v[il, :,  end, e⁻]
-#                             local_aux⁺ = state_auxiliary_surf_v[il, :,  1, e⁺]
-                            
-#                             local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻,  local_state⁺, local_aux⁺, [n1;n2])
-#                         else
-                            
-#                         end
-#                         tendency[il, :, e⁻]  .-=  sM * local_flux
-                        
-#                     end
-#                 end
-                
-#             end 
-#         end
-#     end
-# end
 
 function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
     Δ = zeros(size(Δ⁻))
@@ -218,9 +157,9 @@ function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
             Δ[s] = Δ⁺[s] *  Δ⁻[s]/ (Δ⁺[s] + Δ⁻[s])
         end
     end
-
+    
     return Δ
-
+    
 end
 
 
@@ -237,7 +176,10 @@ function vertical_interface_tendency!(
     )
     dim = 2
     sgeo_v = mesh.sgeo_v
-    bc_bottom_type, bc_top_type = app.bc_bottom_type, app.bc_top_type
+    
+    bc_bottom_type, bc_bottom_data = app.bc_bottom_type, app.bc_bottom_data
+    bc_top_type, bc_top_data = app.bc_top_type, app.bc_top_data
+    
     
     state_primitive_face⁺  = zeros(Float64, num_state_prognostic, Nz+1)
     state_primitive_face⁻  = zeros(Float64, num_state_prognostic, Nz+1)
@@ -250,8 +192,8 @@ function vertical_interface_tendency!(
     for ix = 1:Nx
         for il = 1:Nl
             # single colume treatment 
-
-
+            
+            
             ##########
             #  reconstruct interface states by looping each cell, construct the bottom and top states
             Δzc_col = @view mesh.Δzc[il, ix, :]
@@ -278,7 +220,7 @@ function vertical_interface_tendency!(
             else
                 error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
             end
-
+            
             ##########################################################################################################
             # compute face states by looping cells
             for iz = 1:Nz
@@ -291,7 +233,7 @@ function vertical_interface_tendency!(
                 state_primitive_face⁺[:, iz]   = state_primitive_col[:, iz] - ∂state * Δzc_col[iz]/2.0
                 state_primitive_face⁻[:, iz+1] = state_primitive_col[:, iz] + ∂state * Δzc_col[iz]/2.0
             end
-
+            
             if bc_bottom_type == "periodic"
                 state_primitive_face⁻[:, 1] .=  state_primitive_face⁻[:, Nz+1]
             else
@@ -306,17 +248,17 @@ function vertical_interface_tendency!(
                 # should not use it 
                 state_primitive_face⁺[:, Nz+1] .= NaN64
             end
-
-
-
+            
+            
+            
             prim_to_prog!(app, state_primitive_face⁻, state_prognostic_face⁻)
             prim_to_prog!(app, state_primitive_face⁺, state_prognostic_face⁺)
-
+            
             ##########################################################################################################
             # compute face flux 
-
-
-
+            
+            
+            
             # loop face 
             for iz = 1:Nz+1
                 # face iz ;  bottom cell iz-1 ; top cell is iz
@@ -350,7 +292,7 @@ function vertical_interface_tendency!(
                         local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
                         
                     elseif bc_top_type == "no-slip"
-
+                        
                         local_flux = wall_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, [n1;n2])
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   

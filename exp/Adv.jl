@@ -18,7 +18,11 @@ topology = topology_les(Nl, Nx, Nz, Lx, Lz)
 
 
 mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
-app = Adv("periodic", "periodic", 1.0, 1.0)
+app = Adv("periodic", nothing,  # bottom
+          "periodic", nothing,  # top
+          "periodic", nothing,  # left
+          "periodic", nothing,  # right
+          1.0, 1.0)
 
 dt = 0.1
 params = Dict("Time_Integrator" => "RK2", "cfl_freqency" => -1,  "cfl" => 1/Np, "dt0" => dt, "t_end" => 3.0)
@@ -43,7 +47,7 @@ init_state!(app, mesh, state_prognostic_0, square_2d_func)
 
 set_init_state!(solver, state_prognostic_0)
 
-visual(mesh, state_prognostic_0[:,1,:], "Adv_init.png")
+# visual(mesh, state_prognostic_0[:,1,:], "Adv_init.png")
 
 
 Q = solve!(solver)

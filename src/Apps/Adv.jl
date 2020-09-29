@@ -7,24 +7,44 @@ mutable struct Adv <: Application
     num_state_prognostic::Int64
     num_state_diagnostic::Int64
     num_state_auxiliary::Int64
+
+    
     
     bc_bottom_type::String
+    bc_bottom_data::Union{Array{Float64, 1}, Nothing}
+
     bc_top_type::String
-    
+    bc_top_data::Union{Array{Float64, 1}, Nothing}
+
+    bc_left_type::String
+    bc_left_data::Union{Array{Float64, 1}, Nothing}
+
+    bc_right_type::String
+    bc_right_data::Union{Array{Float64, 1}, Nothing}
+
     # constant advection velocity
     u::Float64
     w::Float64
+
+    
     # Lax Friedrichs flux dissipation parameter
     α::Float64
 end
 
-function Adv(bc_bottom_type::String, bc_top_type::String, u::Float64, w::Float64, α::Float64 = 0.0)
+function Adv(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1}, Nothing},
+             bc_top_type::String,     bc_top_data::Union{Array{Float64, 1}, Nothing},
+             bc_left_type::String,    bc_left_data::Union{Array{Float64, 1}, Nothing},
+             bc_right_type::String,   bc_right_data::Union{Array{Float64, 1}, Nothing},
+             u::Float64, w::Float64,  α::Float64 = 0.0)
     num_state_prognostic = 1
     num_state_diagnostic = 1
     num_state_auxiliary = 0
     
     Adv(num_state_prognostic, num_state_diagnostic, num_state_auxiliary,
-    bc_bottom_type, bc_top_type, 
+    bc_bottom_type, bc_bottom_data,
+    bc_top_type, bc_top_data,
+    bc_left_type, bc_left_data,
+    bc_right_type, bc_right_data,
     u, w, α)
 end
 
