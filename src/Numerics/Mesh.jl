@@ -32,6 +32,8 @@ mutable struct Mesh
     topology_size::Array{Float64, 1}
     # warped topology = (dim=2, (Nl-1)×Nx-1, Nz+1)
     topology::Array{Float64, 3}
+    # vertical mesh size = (Nl, Nx, Nz)
+    Δzc::Array{Float64, 3}
     
    
 
@@ -106,12 +108,42 @@ function Mesh(Nx::Int64, Nz::Int64, Nl::Int64, Nq::Int64, topology_type::String,
 
     (vol_l_geo, vol_q_geo, sgeo_h, sgeo_v) = compute_geometry(topology, ωl, ωq, Dl_l, ϕl_q, Dl_q)
 
+    Δzc = compute_vertical_mesh_size(Nx, Nz, vol_l_geo)
+
     Δs_min = compute_min_nodal_dist(Nx, Nz, vol_l_geo)
     
     
-    Mesh(dim, Nx, Nz, Nl, Nq, topology_type, topology_size, topology, Δs_min, 
+    Mesh(dim, Nx, Nz, Nl, Nq, topology_type, topology_size, topology, Δzc, Δs_min, 
          ξl, ωl, Dl_l, ξq, ωq, ϕl_q, Dl_q, vol_l_geo, vol_q_geo, sgeo_h, sgeo_v)
 end
+
+function compute_vertical_mesh_size(Nx::Int64, Nz::Int64, vol_l_geo::Array{Float64, 3})
+    
+    _, Nl, nelem = size(vol_l_geo)
+
+    Δzc = zeros(2, Nl, Nx, Nz)
+    
+    # horizontal direction
+    for ix = 1:Nx
+        for iz = 1:Nz
+
+            e  = ix + (iz-1)*Nx
+
+            for il = 1:Nl
+    
+                x , z  = vol_l_geo[1:2, il, e]
+                x⁺, z⁺ = vol_l_geo[1:2, il, e⁺]   
+                Δz = sqrt((x⁺ - x)^2 + (z⁺ - z)^2)
+                Δzc[il, ix, iz] = Δz
+                                
+            end
+        end
+    end
+
+    return Δzc
+
+end
+
 
 function compute_min_nodal_dist(Nx::Int64, Nz::Int64, vol_l_geo::Array{Float64, 3})
     
