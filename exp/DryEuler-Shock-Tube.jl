@@ -47,8 +47,6 @@ function shock_tube(direction::String)
     state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
     prim_l = [1.0;   0.0; 0.0; 1.0]
     prim_r = [0.125; 0.0; 0.0; 0.1]
-    
-    prim_r .= prim_l
 
     cons_l = prim_to_prog(app, prim_l, zeros(Float64, app.num_state_auxiliary))
     cons_r = prim_to_prog(app, prim_r, zeros(Float64, app.num_state_auxiliary))
@@ -87,4 +85,4 @@ end
 
 shock_tube("vertical")
 
-# shock_tube("horizontal")
+shock_tube("horizontal")
