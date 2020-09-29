@@ -362,9 +362,10 @@ function visual(mesh::Mesh, state::Array{Float64, 2}, save_file_name::String="No
 
     Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
     vol_l_geo = mesh.vol_l_geo
-
+    topology = mesh.topology
     # x1, x2, M
     x, z = reshape(vol_l_geo[1,:,:], (Nl * Nx, Nz)) , reshape(vol_l_geo[2,:,:], (Nl * Nx, Nz)) 
+
     data = reshape(state, (Nl * Nx, Nz))
     
     

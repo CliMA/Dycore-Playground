@@ -113,7 +113,7 @@ function flux_first_order(app::DryEuler, state_prognostic::Array{Float64, 1}, st
     e_int = internal_energy(app, ρ, ρu, ρe, Φ)
     p = air_pressure(app, ρ,  e_int)
     
-    return flux_first_order!(app, ρ, ρu, ρe, p)
+    return flux_first_order(app, ρ, ρu, ρe, p)
 end
 
 
@@ -163,8 +163,8 @@ function numerical_flux_first_order(app::DryEuler,
     a⁺ = soundspeed_air(app, ρ⁺,  p⁺)
     h⁺ = total_specific_enthalpy(app, ρe⁺, ρ⁺,  p⁺)
     
-    flux⁻ = flux_first_order!(app, ρ⁻, ρu⁻, ρe⁻, p⁻) * n_ij
-    flux⁺ = flux_first_order!(app, ρ⁺, ρu⁺, ρe⁺, p⁺) * n_ij
+    flux⁻ = flux_first_order(app, ρ⁻, ρu⁻, ρe⁻, p⁻) * n_ij
+    flux⁺ = flux_first_order(app, ρ⁺, ρu⁺, ρe⁺, p⁺) * n_ij
     
     un⁻= u⁻' * n_ij
     ut⁻= u⁻' * t_ij
@@ -339,7 +339,7 @@ function init_state!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64,
 
     Nl, num_state_prognostic, nelem = size(state_prognostic)
     vol_l_geo = mesh.vol_l_geo
-    
+
     for e = 1:nelem
         for il = 1:Nl
 
@@ -376,8 +376,8 @@ function DryEuler_test()
     
     
     n = [1.0;0.5]
-    flux  = flux_first_order!(app, conser_l, aux) * n
-    roe_flux =  numerical_flux_first_order!(app, conser_l, aux, conser_r, aux, n)
+    flux  = flux_first_order(app, conser_l, aux) * n
+    roe_flux =  numerical_flux_first_order(app, conser_l, aux, conser_r, aux, n)
     
     @show norm(flux - roe_flux)
 end
