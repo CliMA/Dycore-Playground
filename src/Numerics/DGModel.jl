@@ -295,6 +295,7 @@ function vertical_interface_tendency!(
             
             # loop face 
             for iz = 1:Nz+1
+                @info "Start face id iz : ", iz
                 # face iz ;  bottom cell iz-1 ; top cell is iz
                 # bottom 
                 if iz == 1

@@ -239,8 +239,11 @@ function numerical_flux_first_order(app::DryEuler,
     [h_rl - un_rl * a_rl       ut_rl            0.5 * (u_rl[1] * u_rl[1] + u_rl[2] * u_rl[2])      h_rl + un_rl * a_rl]]
     
     
+    
     flux = 0.5 * (flux⁺ + flux⁻ - P_inv * (du .* ws))
     
+
+    @info " dp : ", dp, flux, n_len, n_len*flux
     return n_len*flux
 end
 
@@ -393,6 +396,8 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
         Tv, p, ρ = profile(alt)
         app.bc_top_data = [ρ; 0.0; 0.0; p]
     end
+
+    return profile
 end
 
 # initialize 
