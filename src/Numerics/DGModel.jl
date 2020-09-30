@@ -205,9 +205,9 @@ function vertical_interface_tendency!(
             if bc_bottom_type == "periodic"
                 ghost_state⁻ .= state_primitive_col[:, Nz]
                 ghost_Δz⁻ = Δzc_col[Nz]
-            elseif bc_top_type == "no-slip" || bc_top_type == "no-penetrate"
+            elseif bc_bottom_type == "no-slip" || bc_bottom_type == "no-penetrate"
                 n = sgeo_v[1:2, il, 1, ix] # n: normal toward the cell
-                ghost_state⁻ .= populate_ghost_cell(app, state_primitive_col[:, 1], bc_top_type, n)
+                ghost_state⁻ .= populate_ghost_cell(app, state_primitive_col[:, 1], bc_bottom_type, n)
                 ghost_Δz⁻ = Δzc_col[1]
             else
                 error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
@@ -222,6 +222,9 @@ function vertical_interface_tendency!(
                 n = sgeo_v[1:2, il, end, ix + (Nz-1)*Nx] # -n: normal toward the cell
                 ghost_state⁺ .= populate_ghost_cell(app, state_primitive_col[:, Nz], bc_top_type, -n)
                 ghost_Δz⁺ = Δzc_col[Nz]
+            elseif bc_top_type == "outlet"
+                ghost_state⁺ .= bc_top_data
+                ghost_Δz⁺ = 0.0
             
             else
                 error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
@@ -235,7 +238,7 @@ function vertical_interface_tendency!(
                 Δz⁺ = ((iz==Nz ? ghost_Δz⁺ : Δzc_col[iz+1]) + Δzc_col[iz])/2.0
                 Δz⁻ = (Δzc_col[iz] + (iz==1 ? ghost_Δz⁻ : Δzc_col[iz-1]))/2.0
                 
-                ∂state = limiter(Δstate⁻/Δz⁻, Δstate⁻/Δz⁻)
+                ∂state = limiter(Δstate⁺/Δz⁺, Δstate⁻/Δz⁻)
          
                 state_primitive_face⁺[:, iz]   = state_primitive_col[:, iz] - ∂state * Δzc_col[iz]/2.0
                 state_primitive_face⁻[:, iz+1] = state_primitive_col[:, iz] + ∂state * Δzc_col[iz]/2.0
@@ -251,7 +254,12 @@ function vertical_interface_tendency!(
             if bc_top_type == "periodic"
                 
                 state_primitive_face⁺[:, Nz+1] .= state_primitive_face⁺[:, 1] 
+
+            elseif bc_top_type == "outlet"
+
+                state_primitive_face⁺[:, Nz+1] .= bc_top_data
             else
+                
                 # should not use it 
                 state_primitive_face⁺[:, Nz+1] .= NaN64
             end
@@ -265,6 +273,8 @@ function vertical_interface_tendency!(
                 state_prognostic_face⁻[:,iz] = prim_to_prog(app, state_primitive_face⁻[:,iz], loc_aux)
                 state_prognostic_face⁺[:,iz] = prim_to_prog(app, state_primitive_face⁺[:,iz], loc_aux)
             end
+
+
 
 
             ##########################################################################################################
@@ -286,7 +296,7 @@ function vertical_interface_tendency!(
                     if bc_bottom_type == "periodic"
                         # use the auxiliary state in  local_aux⁺
                         local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁺, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
-                    elseif bc_bottom_type == "no-slip"
+                    elseif bc_bottom_type == "no-slip" || bc_bottom_type == "no-penetrate"
                         
                         local_flux = wall_flux_first_order(app, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     else
@@ -303,13 +313,19 @@ function vertical_interface_tendency!(
                     e⁻ =  ix + (iz-2)*Nx  
                     local_aux⁻ = state_auxiliary_surf_v[il, :,  end, e⁻] 
                     (n1, n2, sM) = sgeo_v[:, il, end, e⁻] 
-                    if bc_bottom_type == "periodic"
+                    if bc_top_type == "periodic"
                         # use the auxiliary state in  local_aux⁻
                         local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
                         
-                    elseif bc_top_type == "no-slip"
+                    elseif bc_top_type == "no-slip" || bc_top_type == "no-penetrate"
                         
                         local_flux = wall_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, [n1;n2])
+
+                    elseif bc_top_type == "outlet"
+                        
+                         # use the auxiliary state in  local_aux⁻
+                        local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
+                        
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
                     end

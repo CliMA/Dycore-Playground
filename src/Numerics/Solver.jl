@@ -212,14 +212,17 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_surf_v, dQ)
 
     
+ 
    
     @show "vertical_interface_tendency! ", norm(dQ)
 
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
     @show "source_tendency! ", norm(dQ)
 
-    
-    
+
+
+
+    error("stop")
     
     M_lumped = @view mesh.vol_l_geo[3, :, :]
     for s = 1:app.num_state_prognostic

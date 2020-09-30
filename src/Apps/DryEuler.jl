@@ -340,6 +340,10 @@ end
 
 
 #################################################################################################
+"""
+update state_prognostic
+and app.bc_top_data
+"""
 function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3},
     T_virt_surf::Float64, T_min_ref::Float64, H_t::Float64)
     
@@ -348,39 +352,46 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
     
     topology_type = mesh.topology_type
     topology_size = mesh.topology_size
-
+    
     vol_l_geo = mesh.vol_l_geo
     u_init = [0.0; 0.0]
-
+    
     g = app.g
     @assert(g > 0.0)
-
+    
     for e = 1:nelem
         for il = 1:Nl
             
-            x, z = vol_l_geo[1:2, il, e]
-            if topology_type == "AtmoLES"
-                alt = z
-            elseif topology_type == "AtmoGCM"
-                alt = sqrt(x^2 + z^2) - topology_size[1]
-            else 
-                error("topology_type : ", topology_type, " has not implemented yet.")
-            end
             Φ = state_auxiliary[il, 1, e]
-
             
-
+            
+            
             Tv, p, ρ = profile(Φ/g)
             # @info il, state_auxiliary[il, :, e], alt, Tv, p, ρ , Φ/g
-
-
+            
+            
             ρu = ρ*u_init
             ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
             
             state_prognostic[il, :, e] .= [ρ ; ρu ; ρe]
-
+            
             # error("stop")
         end
+    end
+    
+    # 
+    if app.bc_top_type == "outlet"
+        topology = mesh.topology
+        x, z = topology[:, 1, end] # anyone should be the same
+        if topology_type == "AtmoLES"
+            alt = z
+        elseif topology_type == "AtmoGCM"
+            alt = sqrt(x^2 + z^2) - topology_size[1]
+        else 
+            error("topology_type : ", topology_type, " has not implemented yet.")
+        end
+        Tv, p, ρ = profile(alt)
+        app.bc_top_data = [ρ; 0.0; 0.0; p]
     end
 end
 
@@ -410,7 +421,7 @@ function populate_ghost_cell(app::DryEuler, state_primitive::Array{Float64, 1}, 
     else
         error("bc_type  : ", bc_type )
     end
-
+    
     return [ρ ; u_g ; p]
 end
 

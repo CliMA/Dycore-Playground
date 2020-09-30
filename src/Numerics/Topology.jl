@@ -13,6 +13,7 @@ function topology_les(Nl::Int64, Nx::Int64, Nz::Int64, Lx::Float64, Lz::Float64,
     dim = 2
     topology = zeros(Float64, dim, (Nl - 1)*Nx + 1, Nz + 1)
     
+
     ξl, ωl = lglpoints(Nl - 1)
     
     zp = zz
@@ -32,8 +33,13 @@ function topology_les(Nl::Int64, Nx::Int64, Nz::Int64, Lx::Float64, Lz::Float64,
     for i = 1:size(topology, 3)
         topology[1, :, i] .= xp
     end
+
+    top_ghost_cell = zeros(Float64, dim, Nx)
+    for ix = 1:Nx
+        top_ghost_cell[:, ix] = 1.5*topology[:, ix, Nz+1] - 0.5*topology[:, ix, Nz]
+    end
     
-    return topology
+    return topology, top_ghost_cell
 end
 
 """
@@ -50,7 +56,8 @@ function topology_gcm(Nl::Int64, Nx::Int64, Nz::Int64, r::Float64, R::Float64,
     # The unwraped domain is [-Lx/2, Lx/2]×[0, Ly], the mesh is uniform in the horizontal direction
     dim = 2
     topology = zeros(Float64, dim, (Nl - 1)*Nx + 1, Nz + 1)
-    
+    top_ghost_cell = zeros(Float64, dim, Nx)
+
     ξl, ωl = lglpoints(Nl - 1)
     
     
@@ -71,8 +78,12 @@ function topology_gcm(Nl::Int64, Nx::Int64, Nz::Int64, r::Float64, R::Float64,
         end
     end
 
+    top_ghost_cell = zeros(Float64, dim, Nx)
+    for ix = 1:Nx
+        top_ghost_cell[:, ix] = 1.5*topology[:, ix, Nz+1] - 0.5*topology[:, ix, Nz]
+    end
     
-    return topology
+    return topology, top_ghost_cell
 end
 
 
