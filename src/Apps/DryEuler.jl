@@ -401,7 +401,18 @@ function init_state!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64,
 end
 
 
+function populate_ghost_cell(app::DryEuler, state_primitive::Array{Float64, 1}, bc_type::String, n::Array{Float64, 1})
+    ρ, u, p = state_primitive[1], state_primitive[2:3], state_primitive[4]
+    if bc_type == "no-slip"
+        u_g = -u
+    elseif bc_type == "no-penetrate"
+        u_g = u - 2*(u * n')*n
+    else
+        error("bc_type  : ", bc_type )
+    end
 
+    return [ρ ; u_g ; p]
+end
 
 function DryEuler_test()
     app = DryEuler("no-slip", "no-slip")

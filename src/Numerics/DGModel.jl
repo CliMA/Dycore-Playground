@@ -205,8 +205,9 @@ function vertical_interface_tendency!(
             if bc_bottom_type == "periodic"
                 ghost_state⁻ .= state_primitive_col[:, Nz]
                 ghost_Δz⁻ = Δzc_col[Nz]
-            elseif bc_bottom_type == "no-slip"
-                ghost_state⁻ .= [state_primitive_col[1, 1]; -state_primitive_col[2, 1] ; -state_primitive_col[2, 1] ; state_primitive_col[dim+2, 1]]
+            elseif bc_top_type == "no-slip" || bc_top_type == "no-penetrate"
+                n = sgeo_v[1:2, il, 1, ix] # n: normal toward the cell
+                ghost_state⁻ .= populate_ghost_cell(app, state_primitive_col[:, 1], bc_top_type, n)
                 ghost_Δz⁻ = Δzc_col[1]
             else
                 error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
@@ -216,9 +217,12 @@ function vertical_interface_tendency!(
             if bc_top_type == "periodic"
                 ghost_state⁺ .= state_primitive_col[:, 1]
                 ghost_Δz⁺ = Δzc_col[1]
-            elseif bc_top_type == "no-slip"
-                ghost_state⁺ .= [state_primitive_col[1, Nz]; -state_primitive_col[2, Nz] ; -state_primitive_col[2, Nz] ; state_primitive_col[dim+2, Nz]]
+
+            elseif bc_top_type == "no-slip" || bc_top_type == "no-penetrate"
+                n = sgeo_v[1:2, il, end, ix + (Nz-1)*Nx] # -n: normal toward the cell
+                ghost_state⁺ .= populate_ghost_cell(app, state_primitive_col[:, Nz], bc_top_type, -n)
                 ghost_Δz⁺ = Δzc_col[Nz]
+            
             else
                 error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
             end
@@ -360,6 +364,7 @@ function source_tendency!(
             
             for il = 1:Nl
                 x, z, M = vol_l_geo[:, il, e]
+    
                 tendency[il, :, e] += source(app, local_states_l[il, :], local_aux_l[il, :]) * M
             end
             

@@ -114,3 +114,8 @@ function init_state_auxiliary!(app::Adv, mesh::Mesh,
     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
     
 end
+
+
+function populate_ghost_cell(app::Adv, state_primitive::Array{Float64, 1}, bc_type::String, n::Array{Float64, 1})
+    return state_primitive
+end
