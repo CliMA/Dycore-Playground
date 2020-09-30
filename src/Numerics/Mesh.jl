@@ -386,6 +386,7 @@ function compute_geometry(topology::Array{Float64, 3},
                     # ∂ξ∂z, ∂η∂z
                     n = [ ∂ξ∂x*N[1] + ∂η∂x*N[2]  ; ∂ξ∂z*N[1] + ∂η∂z*N[2] ]
                     
+                    # @info "sM compute ", iface, i, ∂x∂ξ, ∂x∂η, ∂z∂ξ, ∂z∂η, n
                     sgeo_v[:, i, iface, e] .= n[1], n[2], sM, x, z
                 end
             end 

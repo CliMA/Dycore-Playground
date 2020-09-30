@@ -27,24 +27,24 @@ function (profile::DecayingTemperatureProfile)(
 
     # todo
     
-    # Scale height for surface temperature
-    H_sfc = _R_d * profile.T_virt_surf / _grav
-    H_t = profile.H_t
-    z′ = z / H_t
-    tanh_z′ = tanh(z′)
+    # # Scale height for surface temperature
+    # H_sfc = _R_d * profile.T_virt_surf / _grav
+    # H_t = profile.H_t
+    # z′ = z / H_t
+    # tanh_z′ = tanh(z′)
     
-    ΔTv = profile.T_virt_surf - profile.T_min_ref
-    Tv = profile.T_virt_surf - ΔTv * tanh_z′
+    # ΔTv = profile.T_virt_surf - profile.T_min_ref
+    # Tv = profile.T_virt_surf - ΔTv * tanh_z′
     
-    ΔTv′ = ΔTv / profile.T_virt_surf
-    p = -H_t * (z′ + ΔTv′ * (log(1 - ΔTv′ * tanh_z′) - log(1 + tanh_z′) + z′))
-    p /= H_sfc * (1 - ΔTv′^2)
-    p = _MSLP * exp(p)
-    ρ = p/(_R_d*Tv)
+    # ΔTv′ = ΔTv / profile.T_virt_surf
+    # p = -H_t * (z′ + ΔTv′ * (log(1 - ΔTv′ * tanh_z′) - log(1 + tanh_z′) + z′))
+    # p /= H_sfc * (1 - ΔTv′^2)
+    # p = _MSLP * exp(p)
+    # ρ = p/(_R_d*Tv)
 
 
-    # ρ = 1.0
-    # p = _MSLP - _grav*ρ*z
-    # Tv = NaN64
+    ρ = 1.0
+    p = _MSLP - _grav*ρ*z
+    Tv = NaN64
     return (Tv, p, ρ)
 end

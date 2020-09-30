@@ -207,7 +207,10 @@ function vertical_interface_tendency!(
                 ghost_Δz⁻ = Δzc_col[Nz]
             elseif bc_bottom_type == "no-slip" || bc_bottom_type == "no-penetrate"
                 n = sgeo_v[1:2, il, 1, ix] # n: normal toward the cell
-                ghost_state⁻ .= populate_ghost_cell(app, state_primitive_col[:, 1], bc_bottom_type, n)
+                ghost_state⁻ .= populate_ghost_cell(app, state_primitive_col[:, 1], state_primitive_col[:, 2], Δzc_col[1], Δzc_col[2], bc_bottom_type, n)
+                @info ghost_state⁻
+                @info state_primitive_col[:, 1]
+
                 ghost_Δz⁻ = Δzc_col[1]
             else
                 error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
@@ -218,10 +221,6 @@ function vertical_interface_tendency!(
                 ghost_state⁺ .= state_primitive_col[:, 1]
                 ghost_Δz⁺ = Δzc_col[1]
 
-            elseif bc_top_type == "no-slip" || bc_top_type == "no-penetrate"
-                n = sgeo_v[1:2, il, end, ix + (Nz-1)*Nx] # -n: normal toward the cell
-                ghost_state⁺ .= populate_ghost_cell(app, state_primitive_col[:, Nz], bc_top_type, -n)
-                ghost_Δz⁺ = Δzc_col[Nz]
             elseif bc_top_type == "outlet"
                 ghost_state⁺ .= bc_top_data
                 ghost_Δz⁺ = 0.0
@@ -239,9 +238,21 @@ function vertical_interface_tendency!(
                 Δz⁻ = (Δzc_col[iz] + (iz==1 ? ghost_Δz⁻ : Δzc_col[iz-1]))/2.0
                 
                 ∂state = limiter(Δstate⁺/Δz⁺, Δstate⁻/Δz⁻)
+
+                
          
                 state_primitive_face⁺[:, iz]   = state_primitive_col[:, iz] - ∂state * Δzc_col[iz]/2.0
                 state_primitive_face⁻[:, iz+1] = state_primitive_col[:, iz] + ∂state * Δzc_col[iz]/2.0
+
+
+                # if iz == 1
+                #     @info "here"
+                #     @show Δz⁻, Δz⁺, ∂state 
+                #     @show Δstate⁺/Δz⁺, Δstate⁻/Δz⁻
+                #     @show state_primitive_face⁻[:, iz+1] 
+                #     @show state_primitive_col[:, iz] , ∂state * Δzc_col[iz]/2.0
+                #     @show (state_primitive_col[:, iz] + state_primitive_col[:, iz+1])/2.0
+                # end
             end
             
             if bc_bottom_type == "periodic"
@@ -305,7 +316,9 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
 
-          
+                    @show iz, state_prognostic_face⁺[:, iz]
+                    @show local_flux, sM 
+                    @info e⁺, tendency[il, :,  e⁺] 
          
                     
                     # top 
@@ -317,10 +330,6 @@ function vertical_interface_tendency!(
                         # use the auxiliary state in  local_aux⁻
                         local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
                         
-                    elseif bc_top_type == "no-slip" || bc_top_type == "no-penetrate"
-                        
-                        local_flux = wall_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, [n1;n2])
-
                     elseif bc_top_type == "outlet"
                         
                          # use the auxiliary state in  local_aux⁻
@@ -331,6 +340,11 @@ function vertical_interface_tendency!(
                     end
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
+
+                    @show iz, state_prognostic_face⁻[:, iz], state_prognostic_face⁺[:, iz]
+                    @show local_flux, sM 
+                    @info e⁻, tendency[il, :,  e⁻]
+
 
 
                     
@@ -345,9 +359,16 @@ function vertical_interface_tendency!(
 
                     
                     local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
+
+                   
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
+
+                    @show iz, state_prognostic_face⁻[:, iz], state_prognostic_face⁺[:, iz]
+                    @show local_flux, sM 
+                    @info e⁻, tendency[il, :,  e⁻]
+                    @info e⁺, tendency[il, :,  e⁺]
 
 
                 end
@@ -380,8 +401,13 @@ function source_tendency!(
             
             for il = 1:Nl
                 x, z, M = vol_l_geo[:, il, e]
+
+             
+
     
                 tendency[il, :, e] += source(app, local_states_l[il, :], local_aux_l[il, :]) * M
+
+                
             end
             
             
