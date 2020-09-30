@@ -45,7 +45,7 @@ function horizontal_volume_tendency!(
             for iq = 1:Nq
                 M, ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z = vol_q_geo[:, iq, e]
                 for il = 1:Nl
-                    # @info size(tendency), size(local_fluxes_q), size(Dl_q)
+                    
                     tendency[il, :, e] .+= local_fluxes_q[iq, :, :] *( M * Dl_q[iq, il] * [∂ξ∂x ; ∂ξ∂z])
                 end
             end
@@ -145,8 +145,6 @@ function horizontal_interface_tendency!(
             end
         end
 
-        # @info tendency[:, 1, :]
-        # error("stop ")
     end
 end
 
@@ -156,7 +154,7 @@ function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
     num_state = length(Δ⁻)
     for s = 1:num_state
         if Δ⁺[s] *  Δ⁻[s] > 0.0
-            Δ[s] = Δ⁺[s] *  Δ⁻[s]/ (Δ⁺[s] + Δ⁻[s])
+            Δ[s] = 2 * Δ⁺[s] *  Δ⁻[s]/ (Δ⁺[s] + Δ⁻[s])
         end
     end
     
@@ -233,7 +231,8 @@ function vertical_interface_tendency!(
                 Δz⁺ = ((iz==Nz ? ghost_Δz⁺ : Δzc_col[iz+1]) + Δzc_col[iz])/2.0
                 Δz⁻ = (Δzc_col[iz] + (iz==1 ? ghost_Δz⁻ : Δzc_col[iz-1]))/2.0
                 
-                ∂state = limiter(Δstate⁻/Δz⁻, Δstate⁺/Δz⁺)
+                ∂state = limiter(Δstate⁻/Δz⁻, Δstate⁻/Δz⁻)
+         
                 state_primitive_face⁺[:, iz]   = state_primitive_col[:, iz] - ∂state * Δzc_col[iz]/2.0
                 state_primitive_face⁻[:, iz+1] = state_primitive_col[:, iz] + ∂state * Δzc_col[iz]/2.0
             end
@@ -252,6 +251,8 @@ function vertical_interface_tendency!(
                 # should not use it 
                 state_primitive_face⁺[:, Nz+1] .= NaN64
             end
+            
+
             
             
             for iz = 1:Nz+1
@@ -289,6 +290,8 @@ function vertical_interface_tendency!(
                     end
                     
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
+
+          
          
                     
                     # top 
@@ -309,6 +312,7 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
 
+
                     
                 else
                     # bottom element
@@ -318,11 +322,13 @@ function vertical_interface_tendency!(
                     local_aux⁺ = state_auxiliary_surf_v[il, :,  1, e⁺] 
                     
                     (n1, n2, sM) = sgeo_v[:, il, end, e⁻] 
+
                     
                     local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
+
 
                 end
             end 
