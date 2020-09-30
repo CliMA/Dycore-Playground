@@ -8,7 +8,7 @@ include("../src/Numerics/Solver.jl")
 function shock_tube(direction::String)
     @assert(direction == "horizontal" || direction == "vertical")
     
-    Np = 4
+    Np = 2
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
     topology_type = "AtmoLES"
@@ -20,7 +20,7 @@ function shock_tube(direction::String)
 
     else direction == "horizontal"
 
-        Nx, Nz = 20,  2
+        Nx, Nz = 50,  2
         Lx, Lz = 1.0, 1.0
         
     end

@@ -137,7 +137,6 @@ function horizontal_interface_tendency!(
             else
                 (n1, n2, sM) = sgeo_h[:, 1, end, e⁻] 
 
-                # @info iz, local_state⁻,  local_state⁺
                 
                 local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [n1;n2])
                 
