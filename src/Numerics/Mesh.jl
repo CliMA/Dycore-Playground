@@ -417,8 +417,6 @@ function visual(mesh::Mesh, state::Array{Float64, 2}, save_file_name::String="No
         PyPlot.savefig(save_file_name)
         PyPlot.close("all")
     end
-        
-
 end
 
 

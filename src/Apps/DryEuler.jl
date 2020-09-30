@@ -1,3 +1,5 @@
+include("TemperatureProfiles.jl")
+
 mutable struct DryEuler <: Application
     num_state_prognostic::Int64
     num_state_diagnostic::Int64
@@ -263,8 +265,9 @@ end
 
 
 function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
-    
-    return zeros(Float64, app.num_state_prognostic)
+    ρ = state_prognostic[1]
+    ∇Φ = state_auxiliary[2:3]
+    return [0.0; -ρ*∇Φ; 0.0]
 end
 
 
@@ -337,16 +340,21 @@ end
 
 
 #################################################################################################
-function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3},
+function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3},
     T_virt_surf::Float64, T_min_ref::Float64, H_t::Float64)
     
     profile = DecayingTemperatureProfile(app, T_virt_surf, T_min_ref, H_t)
     γ = app.γ
-    FT = eltype(state)
     
     topology_type = mesh.topology_type
     topology_size = mesh.topology_size
-    
+
+    vol_l_geo = mesh.vol_l_geo
+    u_init = [0.0; 0.0]
+
+    g = app.g
+    @assert(g > 0.0)
+
     for e = 1:nelem
         for il = 1:Nl
             
@@ -358,12 +366,20 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
             else 
                 error("topology_type : ", topology_type, " has not implemented yet.")
             end
+            Φ = state_auxiliary[il, 1, e]
+
             
-            Tv, p, ρ = profile(z)
+
+            Tv, p, ρ = profile(Φ/g)
+            # @info il, state_auxiliary[il, :, e], alt, Tv, p, ρ , Φ/g
+
+
             ρu = ρ*u_init
             ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
             
             state_prognostic[il, :, e] .= [ρ ; ρu ; ρe]
+
+            # error("stop")
         end
     end
 end
