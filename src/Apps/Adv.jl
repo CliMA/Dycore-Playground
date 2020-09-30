@@ -64,7 +64,7 @@ end
 #     state_prognostic .= state_primitive 
 # end
 
-function prog_to_prim!(app::Adv, state_prognostic::Array{Float64, 3}, state_primitive::Array{Float64, 3})
+function prog_to_prim!(app::Adv, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3}, state_primitive::Array{Float64, 3})
     state_primitive .= state_prognostic
 end
 

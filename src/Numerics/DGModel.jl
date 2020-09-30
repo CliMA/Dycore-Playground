@@ -136,6 +136,8 @@ function horizontal_interface_tendency!(
                 
             else
                 (n1, n2, sM) = sgeo_h[:, 1, end, e⁻] 
+
+                # @info iz, local_state⁻,  local_state⁺
                 
                 local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [n1;n2])
                 
@@ -208,9 +210,6 @@ function vertical_interface_tendency!(
             elseif bc_bottom_type == "no-slip" || bc_bottom_type == "no-penetrate"
                 n = sgeo_v[1:2, il, 1, ix] # n: normal toward the cell
                 ghost_state⁻ .= populate_ghost_cell(app, state_primitive_col[:, 1], state_primitive_col[:, 2], Δzc_col[1], Δzc_col[2], bc_bottom_type, n)
-                @info ghost_state⁻
-                @info state_primitive_col[:, 1]
-
                 ghost_Δz⁻ = Δzc_col[1]
             else
                 error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
@@ -226,7 +225,7 @@ function vertical_interface_tendency!(
                 ghost_Δz⁺ = 0.0
             
             else
-                error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
+                error("bc_top_type = ", bc_top_type, " has not implemented")   
             end
             
             ##########################################################################################################
@@ -295,7 +294,6 @@ function vertical_interface_tendency!(
             
             # loop face 
             for iz = 1:Nz+1
-                @info "Start face id iz : ", iz
                 # face iz ;  bottom cell iz-1 ; top cell is iz
                 # bottom 
                 if iz == 1
@@ -316,10 +314,6 @@ function vertical_interface_tendency!(
                     end
                     
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
-
-                    @show iz, state_prognostic_face⁺[:, iz]
-                    @show local_flux, sM 
-                    @info e⁺, tendency[il, :,  e⁺] 
          
                     
                     # top 
@@ -342,11 +336,6 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
 
-                    @show iz, state_prognostic_face⁻[:, iz], state_prognostic_face⁺[:, iz]
-                    @show local_flux, sM 
-                    @info e⁻, tendency[il, :,  e⁻]
-
-
 
                     
                 else
@@ -365,11 +354,6 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
-
-                    @show iz, state_prognostic_face⁻[:, iz], state_prognostic_face⁺[:, iz]
-                    @show local_flux, sM 
-                    @info e⁻, tendency[il, :,  e⁻]
-                    @info e⁺, tendency[il, :,  e⁺]
 
 
                 end

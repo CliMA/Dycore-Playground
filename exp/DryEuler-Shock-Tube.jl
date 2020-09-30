@@ -29,9 +29,20 @@ function shock_tube(direction::String)
     topology = topology_les(Nl, Nx, Nz, Lx, Lz)
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
     gravity = false
+
+
+    # set initial condition 
+    num_state_prognostic, nelem = 4, Nx*Nz
+    
+    state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
+    prim_l = [1.0;   0.0; 0.0; 1.0]
+    prim_r = [0.125; 0.0; 0.0; 0.1]
+
+    
+
     
     if direction == "vertical"
-        app = DryEuler("no-slip", nothing, "no-slip", nothing,  "periodic", nothing, "periodic", nothing, gravity)
+        app = DryEuler("no-slip", nothing, "outlet", prim_r,  "periodic", nothing, "periodic", nothing, gravity)
     else direction == "horizontal"
         app = DryEuler("periodic", nothing, "periodic", nothing, "no-slip", nothing, "no-slip", nothing,  gravity)
     end
@@ -41,16 +52,9 @@ function shock_tube(direction::String)
     solver = Solver(app, mesh, params)
     
     
-    # set initial condition 
-    num_state_prognostic, nelem = app.num_state_prognostic, Nx*Nz
     
-    state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
-    prim_l = [1.0;   0.0; 0.0; 1.0]
-    prim_r = [0.125; 0.0; 0.0; 0.1]
-
     cons_l = prim_to_prog(app, prim_l, zeros(Float64, app.num_state_auxiliary))
     cons_r = prim_to_prog(app, prim_r, zeros(Float64, app.num_state_auxiliary))
-
 
     
     function shock_tube_func(x::Float64, z::Float64)

@@ -242,8 +242,6 @@ function numerical_flux_first_order(app::DryEuler,
     
     flux = 0.5 * (flux⁺ + flux⁻ - P_inv * (du .* ws))
     
-
-    @info " dp : ", dp, flux, n_len, n_len*flux
     return n_len*flux
 end
 
@@ -429,7 +427,6 @@ function populate_ghost_cell(app::DryEuler, state_primitive::Array{Float64, 1}, 
     else
         error("bc_type  : ", bc_type )
     end
-    @info "state_primitive,, state_primitive⁺ = ",  state_primitive, state_primitive⁺
     return [ρ - 2*(ρ⁺ - ρ)/(Δz + Δz⁺) * Δz ; u_g ; p - 2*(p⁺ - p)/(Δz + Δz⁺) * Δz]
 end
 

@@ -33,13 +33,8 @@ function topology_les(Nl::Int64, Nx::Int64, Nz::Int64, Lx::Float64, Lz::Float64,
     for i = 1:size(topology, 3)
         topology[1, :, i] .= xp
     end
-
-    top_ghost_cell = zeros(Float64, dim, Nx)
-    for ix = 1:Nx
-        top_ghost_cell[:, ix] = 1.5*topology[:, ix, Nz+1] - 0.5*topology[:, ix, Nz]
-    end
     
-    return topology, top_ghost_cell
+    return topology
 end
 
 """
@@ -77,13 +72,8 @@ function topology_gcm(Nl::Int64, Nx::Int64, Nz::Int64, r::Float64, R::Float64,
             topology[:, ix, iz] .= rp[iz]*cos(θp[ix]), rp[iz]*sin(θp[ix])
         end
     end
-
-    top_ghost_cell = zeros(Float64, dim, Nx)
-    for ix = 1:Nx
-        top_ghost_cell[:, ix] = 1.5*topology[:, ix, Nz+1] - 0.5*topology[:, ix, Nz]
-    end
     
-    return topology, top_ghost_cell
+    return topology
 end
 
 

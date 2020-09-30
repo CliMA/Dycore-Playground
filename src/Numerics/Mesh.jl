@@ -32,8 +32,6 @@ mutable struct Mesh
     topology_size::Array{Float64, 1}
     # warped topology = (dim=2, (Nl-1)×Nx-1, Nz+1)
     topology::Array{Float64, 3}
-    # ghost point locations = (dim=2, Nx)
-    top_ghost_cell::Array{Float64, 2}
     # vertical mesh size = (Nl, Nx, Nz)
     Δzc::Array{Float64, 3}
     
@@ -89,7 +87,7 @@ mutable struct Mesh
 end
 
 
-function Mesh(Nx::Int64, Nz::Int64, Nl::Int64, Nq::Int64, topology_type::String, topology_size::Array{Float64, 1}, topology::Array{Float64, 3}, top_ghost_cell::Array{Float64, 2})
+function Mesh(Nx::Int64, Nz::Int64, Nl::Int64, Nq::Int64, topology_type::String, topology_size::Array{Float64, 1}, topology::Array{Float64, 3})
     dim = size(topology, 1)
     
     @assert(dim == 2)
@@ -115,7 +113,7 @@ function Mesh(Nx::Int64, Nz::Int64, Nl::Int64, Nq::Int64, topology_type::String,
     Δs_min = compute_min_nodal_dist(Nx, Nz, vol_l_geo)
     
     
-    Mesh(dim, Nx, Nz, Nl, Nq, topology_type, topology_size, topology, top_ghost_cell, Δzc, Δs_min, 
+    Mesh(dim, Nx, Nz, Nl, Nq, topology_type, topology_size, topology, Δzc, Δs_min, 
          ξl, ωl, Dl_l, ξq, ωq, ϕl_q, Dl_q, vol_l_geo, vol_q_geo, sgeo_h, sgeo_v)
 end
 
