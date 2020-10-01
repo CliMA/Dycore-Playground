@@ -116,6 +116,7 @@ function init_state_auxiliary!(app::Adv, mesh::Mesh,
 end
 
 
-function populate_ghost_cell(app::Adv, state_primitive::Array{Float64, 1}, state_primitive⁺::Array{Float64, 1}, Δz::Float64, Δz⁺::Float64, bc_type::String, n::Array{Float64, 1})
+function bc_impose(app::Adv, state_primitive::Array{Float64, 1}, bc_type::String, n::Array{Float64, 1})
+    @warn("Adv bc_impose")
     return state_primitive
 end
