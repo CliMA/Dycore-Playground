@@ -22,7 +22,7 @@ function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
     return Δ
 end
 
-function reconstruction_1d_fv(app, state_primitive_col, Δzc_col, 
+function reconstruction_1d_fv(app::Application, state_primitive_col, Δzc_col, 
     bc_bottom_type::String, bc_bottom_data::Union{Array{Float64, 1}, Nothing}, bc_bottom_n::Union{Array{Float64, 1}, Nothing},
     bc_top_type::String, bc_top_data::Union{Array{Float64, 1}, Nothing}, bc_top_n::Union{Array{Float64, 1}, Nothing},
     state_primitive_face⁻::Array{Float64, 2}, state_primitive_face⁺::Array{Float64, 2})
@@ -49,7 +49,7 @@ function reconstruction_1d_fv(app, state_primitive_col, Δzc_col,
     if bc_bottom_type == "periodic" && bc_top_type == "periodic"
         state_primitive_face⁻[:, 1] .=  state_primitive_face⁻[:, Nz+1]
         state_primitive_face⁺[:, Nz+1] .= state_primitive_face⁺[:, 1] 
-
+        
         return ;
     end
     
@@ -77,34 +77,19 @@ function reconstruction_1d_fv(app, state_primitive_col, Δzc_col,
         Δz1, Δz2 = Δzc_col[Nz], Δzc_col[Nz-1]
         # outlet state
         state_primitive_face⁺[:, Nz + 1] = bc_top_data
-
+        
         Δstate⁺ = state_primitive_col[:, Nz] - state_primitive_col[:, Nz-1]
         Δstate⁻ = state_primitive_face⁺[:, Nz + 1] - state_primitive_col[:, Nz] 
         Δz⁺ = (Δz1+Δz2)/2.0
         Δz⁻ = Δz1/2.0
         ∂state = limiter(Δstate⁺/Δz⁺, Δstate⁻/Δz⁻)
-
+        
         # one-side extrapolation
         state_primitive_face⁻[:, Nz + 1] = state_primitive_col[:, Nz] + ∂state * Δz1/2.0
         state_primitive_face⁺[:, Nz] = state_primitive_col[:, Nz] - ∂state * Δz1/2.0
     else
         error("bc_top_type = ", bc_top_type, " has not implemented")   
     end   
-end
-
-
-
-
-
-function reconstruction_1d_weno(state_primitive_col, Δz_col, bc_bottom_type::String, bc_top_type::String, 
-    state_primitive_face⁻::Array{Float64, 2}, state_primitive_face⁺::Array{Float64, 2})
-    
-    num_state_prognostic, Nz = size(state_primitive)
-    
-    for i = 1:Nz+1
-        
-        (state_primitive_face⁻[:, i], state_primitive_face⁺[:, i]) 
-    end
 end
 
 
@@ -143,9 +128,9 @@ function vertical_interface_tendency!(
             bc_bottom_n = sgeo_v[1:2, il, 1, ix] 
             bc_top_n = sgeo_v[1:2, il, end, ix + (Nz - 1)*Nx] 
             reconstruction_1d_fv(app, state_primitive_col, Δzc_col, 
-                                 bc_bottom_type, bc_bottom_data, bc_bottom_n, 
-                                 bc_top_type, bc_top_data, bc_top_n, 
-                                 state_primitive_face⁻, state_primitive_face⁺)
+            bc_bottom_type, bc_bottom_data, bc_bottom_n, 
+            bc_top_type, bc_top_data, bc_top_n, 
+            state_primitive_face⁻, state_primitive_face⁺)
             
             
             for iz = 1:Nz+1
@@ -200,7 +185,7 @@ function vertical_interface_tendency!(
                         
                         # use the auxiliary state in  local_aux⁻
                         local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
-
+                        
                         
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
