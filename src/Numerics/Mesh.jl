@@ -365,8 +365,8 @@ function compute_geometry(topology::Array{Float64, 3},
                 N     = (iface == 1 ? [0.0; -1.0] : [0.0 ; 1.0]) 
                 
                 for i = 1:Nl
-                    x  = ϕl_q[i, :]' * (xe * ϕl¹_q)
-                    z  = ϕl_q[i, :]' * (ze * ϕl¹_q)
+                    x  = xe[i, 1] * ϕl¹_q[1]+ xe[i, 2] * ϕl¹_q[2]
+                    z  = ze[i, 1] * ϕl¹_q[1]+ ze[i, 2] * ϕl¹_q[2]
                     
                     ∂x∂ξ = Dl_l[i, :]' * (xe * ϕl¹_q)
                     ∂x∂η = xe[i, :]' * Dl¹_q

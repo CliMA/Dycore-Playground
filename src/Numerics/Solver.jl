@@ -184,7 +184,26 @@ function time_advance!(solver::Solver,  Q::Array{Float64,3}, dt::Float64)
         Q .+=  dQ .* dt
         
     elseif time_integrator == "RK4"
-        error("Time integrator ", method, "has not implemented")
+
+        k1 .= 0
+        spatial_residual!(solver, Q, k1)
+        
+        Q1 .= Q + k1 .* dt/2.0
+        k2 .= 0
+        spatial_residual!(solver, Q1, k2);
+
+        Q1 .= Q + k2 .* dt/2.0
+        k3 .= 0
+        spatial_residual!(solver, Q1, k3);
+
+        Q1 .= Q + k3 .* dt
+        k4 .= 0
+        spatial_residual!(solver, Q1, k4);
+
+        
+        dQ .= 1.0 / 6.0 * (k1 + 2*k2 + 2*k3 + k4)
+        Q .+=  dQ .* dt
+        
         
     else
         error("Time integrator ", method, "has not implemented")
@@ -218,7 +237,7 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     # @show "vertical_interface_tendency! ", norm(dQ)
 
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
-    @show "source_tendency! ", norm(dQ)
+    # @show "source_tendency! ", norm(dQ)
 
     
     M_lumped = @view mesh.vol_l_geo[3, :, :]

@@ -5,12 +5,11 @@ include("../src/Numerics/Solver.jl")
 
 
 
-function shock_tube(direction::String, vertical_method::String)
+function shock_tube(direction::String, vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int64, (3*Np + 1)/2))
     @assert(direction == "horizontal" || direction == "vertical")
     
-    Np = 2
+
     Nl = Np+1
-    Nq = ceil(Int64, (3*Np + 1)/2)
     topology_type = "AtmoLES"
     
     if direction == "vertical"
@@ -107,12 +106,13 @@ vertical_method = "WENO5"
 coor_WENO5, qoi_WENO5 = shock_tube("vertical", vertical_method)
 vertical_method = "FV"
 coor_FV, qoi_FV = shock_tube("vertical", vertical_method)
-coor_DG, qoi_DG = shock_tube("horizontal", vertical_method)
+coor_DG, qoi_DG = shock_tube("horizontal", vertical_method, 2)
+
 
 PyPlot.plot(coor_FV, qoi_FV, "-o", fillstyle = "none", label = "FV")
 PyPlot.plot(coor_WENO3, qoi_WENO3, "-o", fillstyle = "none", label = "WENO3")
 PyPlot.plot(coor_WENO5, qoi_WENO5, "-o", fillstyle = "none", label = "WENO5")
-PyPlot.plot(coor_DG, qoi_DG, "-o", fillstyle = "none", label = "DG (p=2)")
+PyPlot.plot(coor_DG, qoi_DG, "-o", fillstyle = "none", label = "DG (p=2 overintegration)")
 
 PyPlot.legend()
 PyPlot.savefig("Shock-Tube-Vel.pdf")
