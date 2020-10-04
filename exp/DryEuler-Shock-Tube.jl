@@ -83,12 +83,36 @@ function shock_tube(direction::String, vertical_method::String)
     
     
     visual(mesh, Q[:,1,:], "Sod_end_"*direction*".png")
+
+
+
+    state_primitive = solver.state_primitive
+    prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive)
+    if direction == "vertical"
+        coord = reshape(mesh.vol_l_geo[2,:,:], (Nl * Nx, Nz))[1, :]
+        vel  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
+    else
+        coord = reshape(mesh.vol_l_geo[1,:,:], (Nl * Nx, Nz))[:, 1] .+ Lx/2.0
+        vel  = reshape(state_primitive[:, 2 ,:], (Nl * Nx, Nz))[:, 1]
+    end
+    return coord, vel
     
     
 end
 
 
+vertical_method = "WENO3"
+coor_WENO3, qoi_WENO3 = shock_tube("vertical", vertical_method)
+vertical_method = "WENO5"
+coor_WENO5, qoi_WENO5 = shock_tube("vertical", vertical_method)
 vertical_method = "FV"
-shock_tube("vertical", vertical_method)
+coor_FV, qoi_FV = shock_tube("vertical", vertical_method)
+coor_DG, qoi_DG = shock_tube("horizontal", vertical_method)
 
-shock_tube("horizontal", vertical_method)
+PyPlot.plot(coor_FV, qoi_FV, "-o", fillstyle = "none", label = "FV")
+PyPlot.plot(coor_WENO3, qoi_WENO3, "-o", fillstyle = "none", label = "WENO3")
+PyPlot.plot(coor_WENO5, qoi_WENO5, "-o", fillstyle = "none", label = "WENO5")
+PyPlot.plot(coor_DG, qoi_DG, "-o", fillstyle = "none", label = "DG (p=2)")
+
+PyPlot.legend()
+PyPlot.savefig("Shock-Tube-Vel.pdf")

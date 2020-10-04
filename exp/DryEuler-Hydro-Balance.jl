@@ -30,8 +30,8 @@ num_state_prognostic = 4
 
 app = DryEuler("no-penetration", nothing, "outlet", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity)
 
-vertical_method = "FV"
-params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 1.0, "t_end" => 2000.00, "vertical_method" => vertical_method)
+vertical_method = "WENO3"
+params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 1.0, "t_end" => 10000.00, "vertical_method" => vertical_method)
 solver = Solver(app, mesh, params)
 
 
@@ -92,3 +92,4 @@ visual(mesh, state_primitive[:,4,:], "Hydro_Balance_p.png")
 zz = reshape(mesh.vol_l_geo[2,:,:], (Nl * Nx, Nz))[1, :]
 w  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
 PyPlot.plot(w, zz)
+PyPlot.savefig("w.png")
