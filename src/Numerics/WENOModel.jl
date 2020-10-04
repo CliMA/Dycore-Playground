@@ -1,3 +1,6 @@
+include("Mesh.jl")
+include("../Apps/Application.jl")
+
 """
 Observations on the fifth-order WENO method with non-uniform meshes
 

@@ -347,6 +347,9 @@ and app.bc_top_data
 """
 function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3},
     T_virt_surf::Float64, T_min_ref::Float64, H_t::Float64)
+
+    nelem = mesh.Nx * mesh.Nz
+    Nl = mesh.Nl
     
     profile = DecayingTemperatureProfile(app, T_virt_surf, T_min_ref, H_t)
     γ = app.γ
