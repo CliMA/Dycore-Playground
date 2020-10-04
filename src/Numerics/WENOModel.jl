@@ -67,7 +67,7 @@ function weno5_recon(h::Array{Float64, 1}, u::Array{Float64, 2})
     for r = 0:2
         d2B[r+1, 3] = 6.0/((h[3-r] + h[4-r] + h[5-r])*(h[4-r] + h[5-r])*h[5-r])
         d2B[r+1, 2] = d2B[r+1, 3]  - 6.0/((h[3-r] + h[4-r]) * h[4-r] * h[5-r])
-        d2B[r+1, 1] = d2B[r+1, 2]  + 6.0/(h[3-r] * h[4-r] * (h[4-r] * h[5-r]))
+        d2B[r+1, 1] = d2B[r+1, 2]  + 6.0/(h[3-r] * h[4-r] * (h[4-r] + h[5-r]))
     end
 
     d2P = zeros(Float64, num_state_prognostic, 3)
@@ -76,6 +76,8 @@ function weno5_recon(h::Array{Float64, 1}, u::Array{Float64, 2})
             d2P[:, r+1] += d2B[r+1, j+1]*h[3-r+j]*u[:, 3-r+j]
         end
     end
+    @info "d2B: ", d2B
+    @info "d2P: ", d2P
     
     IS2 = h3^4 * d2P.^2
 
@@ -90,15 +92,17 @@ function weno5_recon(h::Array{Float64, 1}, u::Array{Float64, 2})
     d1B[1, 2, 2] = d1B[1, 2, 3] - 2*(h2 - h3 - h4)/((h2+h3)*h3*h4)
     d1B[1, 2, 1] = d1B[1, 2, 2] + 2*(h2 - 2*h3 - h4)/(h2*h3*(h3+h4))
     
-
-    d1B[1, 1, 3] = -4*(h3 + h4)/((h3+h4+h5)*(h4+h5)*h5)
+    # bug in the paper
+    d1B[1, 1, 3] = -2*(2*h3 + h4)/((h3+h4+h5)*(h4+h5)*h5)
     d1B[1, 1, 2] = d1B[1, 1, 3] + 2*(2*h3 + h4 + h5)/((h3+h4)*h4*h5)
     d1B[1, 1, 1] = d1B[1, 1, 2] - 2*(2*h3 + 2*h4 + h5)/(h3*h4*(h4+h5))
 
+    @show d1B[1, :, :]
+    @show u
     for r = 0:2
         for j = 0:2
             d1B[2, r+1, j+1] = d1B[1, r+1, j+1] + 0.5*h3*d2B[r+1, j+1]
-            d1B[2, r+1, j+1] = d1B[1, r+1, j+1] + h3*d2B[r+1, j+1]
+            d1B[3, r+1, j+1] = d1B[1, r+1, j+1] + h3*d2B[r+1, j+1]
         end
     end
     d1P = zeros(Float64, num_state_prognostic, 3, 3)   # xi-1/2 xi, xi+1/2; r 
@@ -110,12 +114,15 @@ function weno5_recon(h::Array{Float64, 1}, u::Array{Float64, 2})
         end
     end
 
+    @info "d1P: ", d1P
+
     IS1 = h3^2 * (d1P[:, 1, :].^2 + 4*d1P[:, 2, :].^2 + d1P[:, 3, :].^2  )/6.0
 
 
     IS = IS1 + IS2
-    @show IS
-    IS .= 0.0
+
+
+ 
 
     d = zeros(Float64, 3)
     d[3] = (h3+h4)*(h3+h4+h5)/((h1+h2+h3+h4)*(h1+h2+h3+h4+h5))
@@ -221,7 +228,7 @@ end
 
 # grid = [0.0; 1.0; 3.0; 6.0]
 
-#grid = [0.0; 1.0; 2.0; 3.0; 4.0; 5.0]
+# grid = [0.0; 1.0; 2.0; 3.0; 4.0; 5.0]
 grid = [0.0; 1.0; 3.0; 6.0; 7.0; 9.0]*0.1
 
 h =  grid[2:end] - grid[1:end-1]
@@ -233,6 +240,10 @@ end
 
 function quad_func(ξ)
     return [(3.0*ξ.^2 .+ 1.0)';(2*ξ .+ 1.0)';] , [(ξ.^3 .+ ξ)';(ξ.^2 .+ ξ)';] 
+end
+
+function third_func(ξ)
+    return [(4.0*ξ.^3 .+ 1.0)';] , [(ξ.^4 .+ ξ)';] 
 end
 
 function fourth_func(ξ)
