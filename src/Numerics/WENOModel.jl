@@ -296,8 +296,8 @@ function reconstruction_1d_weno5(app::Application, state_primitive_col, Δzc_col
     state_primitive_weno, Δz_weno = zeros(num_state_prognostic, 2num_left_stencil+1), zeros(2num_left_stencil+1)
     for iz = [2, Nz-1]
         for is = 1: 2num_left_stencil+1
-            state_primitive_weno[:, is] = state_primitive_col[:, (iz - num_left_stencil + is - 1, Nz)]
-            Δz_weno[is] =  Δzc_col[(iz - num_left_stencil + is - 1, Nz)]
+            state_primitive_weno[:, is] = state_primitive_col[:, (iz - num_left_stencil + is - 1)]
+            Δz_weno[is] =  Δzc_col[(iz - num_left_stencil + is - 1)]
         end
         (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1]) = weno3_recon(Δz_weno, state_primitive_weno)
     end
