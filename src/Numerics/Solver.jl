@@ -43,6 +43,8 @@ mutable struct Solver
     cfl::Float64
     dt0::Float64
     t_end::Float64
+
+    vertical_method::String
     
 end
 
@@ -84,6 +86,8 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     cfl = params["cfl"]
     dt0 = params["dt0"]
     t_end = params["t_end"]
+
+    vertical_method = params["vertical_method"]
     
 
     Solver(app, mesh, 
@@ -92,7 +96,8 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     state_diagnostic,
     state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v,
     tendency, k1, k2, k3, k4, 
-    time_integrator, cfl_freqency, cfl, dt0, t_end
+    time_integrator, cfl_freqency, cfl, dt0, t_end, 
+    vertical_method
     )
     
 end
@@ -209,7 +214,7 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
-    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_surf_v, dQ)
+    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
     # @show "vertical_interface_tendency! ", norm(dQ)
 
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)

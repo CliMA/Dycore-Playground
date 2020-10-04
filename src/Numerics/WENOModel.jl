@@ -210,13 +210,13 @@ function reconstruction_1d_weno3(app::Application, state_primitive_col, Δzc_col
     ##########################################################################################################
     # compute face states by looping cells
     num_left_stencil = 1
-    state_primitive_weno, Δz_weno = zeros(num_state_prognostic, num_stencil), zeros(num_stencil)
+    state_primitive_weno, Δz_weno = zeros(num_state_prognostic, 2num_left_stencil+1), zeros(2num_left_stencil+1)
     for iz = 1:Nz
         for is = 1: 2num_left_stencil+1
             state_primitive_weno[:, is] = state_primitive_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
-            Δz_weno[is] =  Δzc_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
+            Δz_weno[is] =  Δzc_col[mod1(iz - num_left_stencil + is - 1, Nz)]
         end
-        (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1])   = weno3_recon(state_primitive_weno, Δz_weno)
+        (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1])   = weno3_recon(Δz_weno, state_primitive_weno)
     end
     if bc_bottom_type == "periodic" && bc_top_type == "periodic"
         state_primitive_face⁻[:, 1] .=  state_primitive_face⁻[:, Nz+1]
@@ -277,13 +277,13 @@ function reconstruction_1d_weno5(app::Application, state_primitive_col, Δzc_col
     ##########################################################################################################
     # compute face states by looping cells
     num_left_stencil = 2
-    state_primitive_weno, Δz_weno = zeros(num_state_prognostic, num_stencil), zeros(num_stencil)
+    state_primitive_weno, Δz_weno = zeros(num_state_prognostic, 2num_left_stencil+1), zeros(2num_left_stencil+1)
     for iz = 1:Nz
         for is = 1: 2num_left_stencil+1
             state_primitive_weno[:, is] = state_primitive_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
-            Δz_weno[is] =  Δzc_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
+            Δz_weno[is] =  Δzc_col[mod1(iz - num_left_stencil + is - 1, Nz)]
         end
-        (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1]) = weno5_recon(state_primitive_weno, Δz_weno)
+        (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1]) = weno5_recon(Δz_weno, state_primitive_weno)
     end
     if bc_bottom_type == "periodic" && bc_top_type == "periodic"
         state_primitive_face⁻[:, 1] .=  state_primitive_face⁻[:, Nz+1]
@@ -293,13 +293,13 @@ function reconstruction_1d_weno5(app::Application, state_primitive_col, Δzc_col
 
     # reduce to weno3 on near the bc
     num_left_stencil = 1
-    state_primitive_weno, Δz_weno = zeros(num_state_prognostic, num_stencil), zeros(num_stencil)
+    state_primitive_weno, Δz_weno = zeros(num_state_prognostic, 2num_left_stencil+1), zeros(2num_left_stencil+1)
     for iz = [2, Nz-1]
         for is = 1: 2num_left_stencil+1
             state_primitive_weno[:, is] = state_primitive_col[:, (iz - num_left_stencil + is - 1, Nz)]
-            Δz_weno[is] =  Δzc_col[:, (iz - num_left_stencil + is - 1, Nz)]
+            Δz_weno[is] =  Δzc_col[(iz - num_left_stencil + is - 1, Nz)]
         end
-        (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1]) = weno3_recon(state_primitive_weno, Δz_weno)
+        (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1]) = weno3_recon(Δz_weno, state_primitive_weno)
     end
 
     # reduce to fv at bc

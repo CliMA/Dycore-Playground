@@ -25,7 +25,7 @@ app = Adv("periodic", nothing,  # bottom
           1.0, 1.0)
 
 dt = 0.1
-params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1,  "cfl" => 1/Np, "dt0" => dt, "t_end" => 3.0)
+params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1,  "cfl" => 1/Np, "dt0" => dt, "t_end" => 3.0, "vertical_method" => "FV")
 solver = Solver(app, mesh, params)
 
 # initial condition

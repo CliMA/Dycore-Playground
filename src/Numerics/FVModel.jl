@@ -1,3 +1,5 @@
+include("WENOModel.jl")
+
 #ghost cell, reconstruction for primitive variables
 #  | ---- | ---- | ---- | ---- | ---- ...  | ---- |
 # f1     f2     f3     f4    ...         f_Nz    f_{Nz+1}
@@ -7,10 +9,6 @@
 state_primitive, Δz
 state_primitive = Array(num_state_prognostic, Nz), Δz = Array(Nz)
 """
-
-
-
-
 function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
     Δ = zeros(size(Δ⁻))
     num_state = length(Δ⁻)
@@ -39,8 +37,7 @@ function reconstruction_1d_fv(app::Application, state_primitive_col, Δzc_col,
         Δz⁻ = (Δzc_col[iz] + Δzc_col[mod1(iz-1,Nz)])/2.0
         
         ∂state = limiter(Δstate⁺/Δz⁺, Δstate⁻/Δz⁻)
-        
-        
+          
         state_primitive_face⁺[:, iz]   = state_primitive_col[:, iz] - ∂state * Δzc_col[iz]/2.0
         state_primitive_face⁻[:, iz+1] = state_primitive_col[:, iz] + ∂state * Δzc_col[iz]/2.0
         
@@ -98,8 +95,19 @@ function vertical_interface_tendency!(
     mesh::Mesh,
     state_primitive::Array{Float64, 3},
     state_auxiliary_surf_v::Array{Float64,4},
-    tendency::Array{Float64, 3}
+    tendency::Array{Float64, 3};
+    method::String
     )
+    if method == "FV"
+        reconstruction_1d = reconstruction_1d_fv
+    elseif method == "WENO3"
+        reconstruction_1d = reconstruction_1d_weno3
+    elseif method == "WENO5"
+        reconstruction_1d = reconstruction_1d_weno5
+    else
+        error("vertical method : ", method, " has not implemented")
+    end
+
     dim = 2
     sgeo_v = mesh.sgeo_v
     Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
@@ -127,7 +135,7 @@ function vertical_interface_tendency!(
             
             bc_bottom_n = sgeo_v[1:2, il, 1, ix] 
             bc_top_n = sgeo_v[1:2, il, end, ix + (Nz - 1)*Nx] 
-            reconstruction_1d_fv(app, state_primitive_col, Δzc_col, 
+            reconstruction_1d(app, state_primitive_col, Δzc_col, 
             bc_bottom_type, bc_bottom_data, bc_bottom_n, 
             bc_top_type, bc_top_data, bc_top_n, 
             state_primitive_face⁻, state_primitive_face⁺)

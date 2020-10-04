@@ -5,7 +5,7 @@ include("../src/Numerics/Solver.jl")
 
 
 
-function shock_tube(direction::String)
+function shock_tube(direction::String, vertical_method::String)
     @assert(direction == "horizontal" || direction == "vertical")
     
     Np = 2
@@ -47,8 +47,9 @@ function shock_tube(direction::String)
         app = DryEuler("periodic", nothing, "periodic", nothing, "no-slip", nothing, "no-slip", nothing,  gravity)
     end
     
-    
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 0.02, "t_end" => 0.2000)
+
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 0.02, "t_end" => 0.2000, "vertical_method" => vertical_method)
+
     solver = Solver(app, mesh, params)
     
     
@@ -87,6 +88,7 @@ function shock_tube(direction::String)
 end
 
 
-shock_tube("vertical")
+vertical_method = "FV"
+shock_tube("vertical", vertical_method)
 
-shock_tube("horizontal")
+shock_tube("horizontal", vertical_method)

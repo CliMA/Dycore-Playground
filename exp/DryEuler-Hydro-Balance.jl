@@ -30,8 +30,8 @@ num_state_prognostic = 4
 
 app = DryEuler("no-penetration", nothing, "outlet", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity)
 
-
-params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 1.0, "t_end" => 2000.00)
+vertical_method = "FV"
+params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 1.0, "t_end" => 2000.00, "vertical_method" => vertical_method)
 solver = Solver(app, mesh, params)
 
 
