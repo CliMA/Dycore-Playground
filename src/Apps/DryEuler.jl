@@ -33,7 +33,8 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     
     num_state_prognostic = 4
     num_state_diagnostic = 4
-    num_state_auxiliary = 3
+    # Φ ∇Φ ρ_ref p_ref
+    num_state_auxiliary = 5
     
     # constant
     if gravity == false
@@ -336,8 +337,47 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
     end
 end
 
+#=
+function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Array{Float64, 3},
+    state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
+    state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
+    # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
+    p_aux_id , ρ_aux_id = 4 , 5
+    Nl, num_state_auxiliary, nelem = size(state_auxiliary_vol_l)
+    
+    state_auxiliary_vol_l[:, ρ_aux_id, :] .= state_primitive[:, 1, :]
+
+    for iz = 1:Nz
+        for ix = 1:Nx
+            for il = 1:Nl
+                e  = ix + (iz-1)*Nx
+                e⁻ = ix + (iz-2)*Nx
+                if e⁻ > 0
+                    state_auxiliary_surf_v[il,  p_aux_id, 1, e] = state_auxiliary_surf_v[il,  p_aux_id, 2, e⁻]
+                else # on the ground
+                end
+
+                state_auxiliary_surf_v[il,  p_aux_id, 2, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] + ρg*
+
+                state_auxiliary_vol_l[il, p_aux_id, e]
+                
+                if il == 1
+                    state_auxiliary_surf_h[1,  p_aux_id, 1, e] = 
+                elseif il == Nl
+                    state_auxiliary_surf_h[1,  p_aux_id, 2, e] =
+                end
+
+                
+            end
+
+            state_auxiliary_vol_q[:, p_aux_id, e]
+        end
+    end
 
 
+
+end
+=#
 
 
 #################################################################################################

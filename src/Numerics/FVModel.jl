@@ -176,7 +176,10 @@ function vertical_interface_tendency!(
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
                     end
-                    
+                    if il == 1 && ix == 1
+                        @info "wall state ", state_prognostic_face⁺[:, iz]
+                        @info "wall flux ", sM * local_flux
+                    end
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
                     
                     
@@ -216,7 +219,10 @@ function vertical_interface_tendency!(
                     local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     
                     
-                    
+                    if iz  == 2 && il == 1  && ix == 1
+                        @info "wall + 1 state ", state_prognostic_face⁻[:, iz], state_prognostic_face⁺[:, iz], [n1;n2]
+                        @info "wall + 1 flux ", sM * local_flux
+                    end
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
                     

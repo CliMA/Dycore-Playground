@@ -15,7 +15,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
     
     Nx = 1
-    Lx, Lz = 200.0e3, 30.0e3
+    Lx, Lz = 2.0e3, 30.0e3
     
     
     topology_size = [Lx; Lz]
@@ -86,7 +86,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
 end
 
-t_end = 86400.0
+t_end = 100.0 # 86400.0 * 2
 Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
 hydrostatic_balance("WENO3", t_end,  Nz)

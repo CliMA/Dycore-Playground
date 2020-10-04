@@ -223,7 +223,10 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     state_auxiliary_surf_h =  solver.state_auxiliary_surf_h   
     state_auxiliary_surf_v =  solver.state_auxiliary_surf_v
 
+
+    # update_state_auxiliary!(app, mesh, Q, state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
     
+
     horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
     # @show "horizontal_volume_tendency! ", norm(dQ)
     
