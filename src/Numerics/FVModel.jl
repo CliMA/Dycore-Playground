@@ -13,7 +13,6 @@ function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
 
     Δ = zeros(size(Δ⁻))
 
-    return  Δ
     num_state = length(Δ⁻)
     for s = 1:num_state
         if Δ⁺[s] *  Δ⁻[s] > 0.0
@@ -97,6 +96,7 @@ function vertical_interface_tendency!(
     app::Application,
     mesh::Mesh,
     state_primitive::Array{Float64, 3},
+    state_auxiliary_vol_l::Array{Float64,3},
     state_auxiliary_surf_v::Array{Float64,4},
     tendency::Array{Float64, 3};
     method::String
@@ -133,15 +133,37 @@ function vertical_interface_tendency!(
             # single colume treatment  
             ##########
             #  reconstruct interface states by looping each cell, construct the bottom and top states
+            id_col = ix:Nx:Nz*Nx
             Δzc_col = @view mesh.Δzc[il, ix, :]
-            state_primitive_col = @view state_primitive[il, : , ix:Nx:end]
+            state_primitive_col = @view state_primitive[il, : , id_col]
             
+            # normal 
             bc_bottom_n = sgeo_v[1:2, il, 1, ix] 
             bc_top_n = sgeo_v[1:2, il, end, ix + (Nz - 1)*Nx] 
-            reconstruction_1d(app, state_primitive_col, Δzc_col, 
+
+            # auxiliary state
+            p_aux_id = 4
+            p_ref_sur_col = [state_auxiliary_surf_v[il,  p_aux_id, 1, id_col] ; state_auxiliary_surf_v[il,  p_aux_id, 2, id_col[end]]]
+            p_ref_vol_col = state_auxiliary_vol_l[il, p_aux_id, id_col]
+
+            state_primitive_col[4, :] .-= p_ref_vol_col
+
+            reconstruction_1d(app, 
+            state_primitive_col, Δzc_col,
             bc_bottom_type, bc_bottom_data, bc_bottom_n, 
             bc_top_type, bc_top_data, bc_top_n, 
             state_primitive_face⁻, state_primitive_face⁺)
+
+            state_primitive_face⁻[4, :] .+= p_ref_sur_col
+            state_primitive_face⁺[4, :] .+= p_ref_sur_col
+            @show state_primitive_face⁺[4, end-1] , p_ref_sur_col[end-1]
+            @show state_primitive_face⁺[4, end] , p_ref_sur_col[end]
+            @show state_primitive_face⁻[4, end] , p_ref_sur_col[end]
+            state_primitive_face⁺[4, end] = state_primitive_face⁻[4, end]
+
+            # error("stop")
+
+
             
             
             for iz = 1:Nz+1

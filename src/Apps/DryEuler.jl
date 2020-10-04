@@ -337,47 +337,62 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
     end
 end
 
-#=
+
 function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Array{Float64, 3},
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
     # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
     p_aux_id , ρ_aux_id = 4 , 5
+    Nx, Nz, Δzc = mesh.Nx, mesh.Nz, mesh.Δzc
+    ϕl_q = mesh.ϕl_q
+    g =  app.g
     Nl, num_state_auxiliary, nelem = size(state_auxiliary_vol_l)
     
     state_auxiliary_vol_l[:, ρ_aux_id, :] .= state_primitive[:, 1, :]
-
+    
     for iz = 1:Nz
         for ix = 1:Nx
+            e  = ix + (iz-1)*Nx
+            e⁻ = ix + (iz-2)*Nx
             for il = 1:Nl
-                e  = ix + (iz-1)*Nx
-                e⁻ = ix + (iz-2)*Nx
+                
+                
+                Δz = Δzc[il, ix, iz]
+                ρ, p = state_primitive[il, 1, e], state_primitive[il, 4, e]
+                
                 if e⁻ > 0
                     state_auxiliary_surf_v[il,  p_aux_id, 1, e] = state_auxiliary_surf_v[il,  p_aux_id, 2, e⁻]
                 else # on the ground
+                    state_auxiliary_surf_v[il,  p_aux_id, 1, e] = p + ρ*g*Δz/2.0
                 end
-
-                state_auxiliary_surf_v[il,  p_aux_id, 2, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] + ρg*
-
-                state_auxiliary_vol_l[il, p_aux_id, e]
+                
+                state_auxiliary_surf_v[il,  p_aux_id, 2, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz
+                state_auxiliary_vol_l[il, p_aux_id, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz/2.0
                 
                 if il == 1
-                    state_auxiliary_surf_h[1,  p_aux_id, 1, e] = 
+                    state_auxiliary_surf_h[1,  p_aux_id, 1, e] = state_auxiliary_vol_l[il, p_aux_id, e]
                 elseif il == Nl
-                    state_auxiliary_surf_h[1,  p_aux_id, 2, e] =
+                    state_auxiliary_surf_h[1,  p_aux_id, 2, e] = state_auxiliary_vol_l[il, p_aux_id, e]
                 end
-
+                
                 
             end
-
-            state_auxiliary_vol_q[:, p_aux_id, e]
+            
+            state_auxiliary_vol_q[:, p_aux_id, e] .= ϕl_q * state_auxiliary_vol_l[:, p_aux_id, e]
         end
     end
+    
+    @info state_primitive[1, 4, 1 + (Nz-1)*Nx] ,  state_auxiliary_vol_l[1, p_aux_id, 1 + (Nz-1)*Nx]
 
+    @info state_primitive[1, 4, 1 + (2-1)*Nx] ,  state_auxiliary_vol_l[1, p_aux_id, 1 + (2-1)*Nx]
+    @info state_primitive[1, 4, 1 ] ,  state_auxiliary_vol_l[1, p_aux_id, 1 ]
 
-
+    # error("stop")
+    
+    
+    
 end
-=#
+
 
 
 #################################################################################################
@@ -387,7 +402,7 @@ and app.bc_top_data
 """
 function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3},
     T_virt_surf::Float64, T_min_ref::Float64, H_t::Float64)
-
+    
     nelem = mesh.Nx * mesh.Nz
     Nl = mesh.Nl
     
@@ -437,7 +452,7 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
         Tv, p, ρ = profile(alt)
         app.bc_top_data = [ρ; 0.0; 0.0; p]
     end
-
+    
     return profile
 end
 
@@ -459,7 +474,7 @@ end
 
 
 function bc_impose(app::DryEuler, state_primitive::Array{Float64, 1}, bc_type::String, n::Array{Float64, 1})
-
+    
     ρ, u, p = state_primitive[1], state_primitive[2:3], state_primitive[4]
     if bc_type == "no-slip"
         u_g = [0.0 ;0.0]
