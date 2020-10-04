@@ -22,6 +22,34 @@ function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
     return Δ
 end
 
+"""
+h1     h2     h3    
+|--i-1--|--i--|--i+1--|
+without hat : i - 1/2
+with hat    : i + 1/2  
+"""
+# function fv2_recon(app::Application, h::Array{Float64, 1}, u::Array{Float64, 2})
+#     num_state_prognostic = size(u, 1)
+#     h1, h2, h3 = h
+#     ρ1, ρ2, ρ3 = u[1, :]
+#     p1, p2, p3 = u[4, :]
+#     p1_ref, p2_ref, p3_ref =  p2, p2 - (ρ2+ρ3)
+#     p_ref = 
+
+#     # at  i - 1/2,  i + 1/2
+#     u⁻ = zeros(Float64, num_state_prognostic)
+#     u⁺ = zeros(Float64, num_state_prognostic)
+#     for i = 1:num_state_prognostic
+#         u⁻[i] += w[i, :]' * P[i, 1, :]
+#         u⁺[i] += ŵ[i, :]' * P[i, 2, :]
+#     end
+    
+#     return u⁻, u⁺
+
+# end
+
+
+
 function reconstruction_1d_fv(app::Application, state_primitive_col, Δzc_col, 
     bc_bottom_type::String, bc_bottom_data::Union{Array{Float64, 1}, Nothing}, bc_bottom_n::Union{Array{Float64, 1}, Nothing},
     bc_top_type::String, bc_top_data::Union{Array{Float64, 1}, Nothing}, bc_top_n::Union{Array{Float64, 1}, Nothing},
@@ -141,25 +169,29 @@ function vertical_interface_tendency!(
             bc_bottom_n = sgeo_v[1:2, il, 1, ix] 
             bc_top_n = sgeo_v[1:2, il, end, ix + (Nz - 1)*Nx] 
 
-            # auxiliary state
+            # # auxiliary state
             p_aux_id = 4
             p_ref_sur_col = [state_auxiliary_surf_v[il,  p_aux_id, 1, id_col] ; state_auxiliary_surf_v[il,  p_aux_id, 2, id_col[end]]]
             p_ref_vol_col = state_auxiliary_vol_l[il, p_aux_id, id_col]
 
             state_primitive_col[4, :] .-= p_ref_vol_col
 
+
+            bc_top_data_ = copy(bc_top_data)
+            bc_top_data_[4] -= p_ref_sur_col[end]
+
             reconstruction_1d(app, 
             state_primitive_col, Δzc_col,
             bc_bottom_type, bc_bottom_data, bc_bottom_n, 
-            bc_top_type, bc_top_data, bc_top_n, 
+            bc_top_type, bc_top_data_, bc_top_n, 
             state_primitive_face⁻, state_primitive_face⁺)
 
             state_primitive_face⁻[4, :] .+= p_ref_sur_col
             state_primitive_face⁺[4, :] .+= p_ref_sur_col
-            @show state_primitive_face⁺[4, end-1] , p_ref_sur_col[end-1]
-            @show state_primitive_face⁺[4, end] , p_ref_sur_col[end]
-            @show state_primitive_face⁻[4, end] , p_ref_sur_col[end]
-            state_primitive_face⁺[4, end] = state_primitive_face⁻[4, end]
+            # @show state_primitive_face⁺[4, end-1] , p_ref_sur_col[end-1]
+            # @show state_primitive_face⁺[4, end] , p_ref_sur_col[end]
+            # @show state_primitive_face⁻[4, end] , p_ref_sur_col[end]
+            # state_primitive_face⁺[4, end] = state_primitive_face⁻[4, end]
 
             # error("stop")
 
