@@ -64,7 +64,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
 
 
 
-    fig, (ax1, ax2, ax3) = PyPlot.subplots(ncols = 3, nrows=1, sharex=false, sharey=true, figsize=(8,16))
+    fig, (ax1, ax2, ax3) = PyPlot.subplots(ncols = 3, nrows=1, sharex=false, sharey=true, figsize=(12,6))
 
     ax1.plot(ρ0, zz, "-o", fillstyle = "none", label = "Ref")
     ax1.plot(ρ, zz, "-", fillstyle = "none", label = vertical_method)
