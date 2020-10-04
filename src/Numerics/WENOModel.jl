@@ -113,9 +113,6 @@ function weno5_recon(h::Array{Float64, 1}, u::Array{Float64, 2})
     
     IS = IS1 + IS2
     
-    
-    
-    
     d = zeros(Float64, 3)
     d[3] = (h3+h4)*(h3+h4+h5)/((h1+h2+h3+h4)*(h1+h2+h3+h4+h5))
     d[2] = (h1+h2)*(h3+h4+h5)*(h1+2*h2+2*h3+2*h4+h5)/((h1+h2+h3+h4)*(h2+h3+h4+h5)*(h1+h2+h3+h4+h5))
@@ -202,18 +199,149 @@ function weno3_recon(h::Array{Float64, 1}, u::Array{Float64, 2})
     return u⁻, u⁺
 end
 
-# function reconstruction_1d_weno(app::Application, state_primitive_col, Δzc_col, 
-#     bc_bottom_type::String, bc_bottom_data::Union{Array{Float64, 1}, Nothing}, bc_bottom_n::Union{Array{Float64, 1}, Nothing},
-#     bc_top_type::String, bc_top_data::Union{Array{Float64, 1}, Nothing}, bc_top_n::Union{Array{Float64, 1}, Nothing},
-#     state_primitive_face⁻::Array{Float64, 2}, state_primitive_face⁺::Array{Float64, 2})
+function reconstruction_1d_weno3(app::Application, state_primitive_col, Δzc_col, 
+    bc_bottom_type::String, bc_bottom_data::Union{Array{Float64, 1}, Nothing}, bc_bottom_n::Union{Array{Float64, 1}, Nothing},
+    bc_top_type::String, bc_top_data::Union{Array{Float64, 1}, Nothing}, bc_top_n::Union{Array{Float64, 1}, Nothing},
+    state_primitive_face⁻::Array{Float64, 2}, state_primitive_face⁺::Array{Float64, 2})
+    
+    num_state_prognostic, Nz = size(state_primitive_col)
+    
+    
+    ##########################################################################################################
+    # compute face states by looping cells
+    num_left_stencil = 1
+    state_primitive_weno, Δz_weno = zeros(num_state_prognostic, num_stencil), zeros(num_stencil)
+    for iz = 1:Nz
+        for is = 1: 2num_left_stencil+1
+            state_primitive_weno[:, is] = state_primitive_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
+            Δz_weno[is] =  Δzc_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
+        end
+        (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1])   = weno3_recon(state_primitive_weno, Δz_weno)
+    end
+    if bc_bottom_type == "periodic" && bc_top_type == "periodic"
+        state_primitive_face⁻[:, 1] .=  state_primitive_face⁻[:, Nz+1]
+        state_primitive_face⁺[:, Nz+1] .= state_primitive_face⁺[:, 1] 
+        return ;
+    end
+    
+    # update other type of boundary conditions
+    if bc_bottom_type == "no-slip" || bc_bottom_type == "no-penetration"
+        Δz1, Δz2 = Δzc_col[1], Δzc_col[2]
+        # one-side extrapolation
+        state_primitive_face⁺[:, 1] = (2*Δz1+Δz2)/(Δz1+Δz2)*state_primitive_col[:, 1] - Δz1/(Δz1+Δz2)*state_primitive_col[:, 2]
+        state_primitive_face⁺[:, 1] = bc_impose(app, state_primitive_face⁺[:, 1], bc_bottom_type, bc_bottom_n)
+        # interpolation
+        
+        Δstate⁺ = state_primitive_col[:, 2] - state_primitive_col[:, 1]
+        Δstate⁻ = state_primitive_col[:, 1] - state_primitive_face⁺[:, 1]
+        Δz⁺ = (Δz1 + Δz2)/2.0
+        Δz⁻ = Δz1/2.0
+        ∂state = limiter(Δstate⁺/Δz⁺, Δstate⁻/Δz⁻)
+        state_primitive_face⁻[:, 2] = state_primitive_col[:, 1] + ∂state * Δz1/2.0
+        
+    else
+        error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
+    end
+    
+    # populate top ghost state
+    if bc_top_type == "outlet"
+        Δz1, Δz2 = Δzc_col[Nz], Δzc_col[Nz-1]
+        # outlet state
+        state_primitive_face⁺[:, Nz + 1] = bc_top_data
+        
+        Δstate⁺ = state_primitive_col[:, Nz] - state_primitive_col[:, Nz-1]
+        Δstate⁻ = state_primitive_face⁺[:, Nz + 1] - state_primitive_col[:, Nz] 
+        Δz⁺ = (Δz1+Δz2)/2.0
+        Δz⁻ = Δz1/2.0
+        ∂state = limiter(Δstate⁺/Δz⁺, Δstate⁻/Δz⁻)
+        
+        # one-side extrapolation
+        state_primitive_face⁻[:, Nz + 1] = state_primitive_col[:, Nz] + ∂state * Δz1/2.0
+        state_primitive_face⁺[:, Nz] = state_primitive_col[:, Nz] - ∂state * Δz1/2.0
+    else
+        error("bc_top_type = ", bc_top_type, " has not implemented")   
+    end   
+end
 
-#     num_state_prognostic, Nz = size(state_primitive)
 
-#     for i = 1:Nz+1
 
-#         (state_primitive_face⁻[:, i], state_primitive_face⁺[:, i]) 
-#     end
-# end
+
+function reconstruction_1d_weno5(app::Application, state_primitive_col, Δzc_col, 
+    bc_bottom_type::String, bc_bottom_data::Union{Array{Float64, 1}, Nothing}, bc_bottom_n::Union{Array{Float64, 1}, Nothing},
+    bc_top_type::String, bc_top_data::Union{Array{Float64, 1}, Nothing}, bc_top_n::Union{Array{Float64, 1}, Nothing},
+    state_primitive_face⁻::Array{Float64, 2}, state_primitive_face⁺::Array{Float64, 2})
+    
+    num_state_prognostic, Nz = size(state_primitive_col)
+    
+    
+    ##########################################################################################################
+    # compute face states by looping cells
+    num_left_stencil = 2
+    state_primitive_weno, Δz_weno = zeros(num_state_prognostic, num_stencil), zeros(num_stencil)
+    for iz = 1:Nz
+        for is = 1: 2num_left_stencil+1
+            state_primitive_weno[:, is] = state_primitive_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
+            Δz_weno[is] =  Δzc_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
+        end
+        (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1]) = weno5_recon(state_primitive_weno, Δz_weno)
+    end
+    if bc_bottom_type == "periodic" && bc_top_type == "periodic"
+        state_primitive_face⁻[:, 1] .=  state_primitive_face⁻[:, Nz+1]
+        state_primitive_face⁺[:, Nz+1] .= state_primitive_face⁺[:, 1] 
+        return ;
+    end
+
+    # reduce to weno3 on near the bc
+    num_left_stencil = 1
+    state_primitive_weno, Δz_weno = zeros(num_state_prognostic, num_stencil), zeros(num_stencil)
+    for iz = [2, Nz-1]
+        for is = 1: 2num_left_stencil+1
+            state_primitive_weno[:, is] = state_primitive_col[:, (iz - num_left_stencil + is - 1, Nz)]
+            Δz_weno[is] =  Δzc_col[:, (iz - num_left_stencil + is - 1, Nz)]
+        end
+        (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1]) = weno3_recon(state_primitive_weno, Δz_weno)
+    end
+
+    # reduce to fv at bc
+    # update other type of boundary conditions
+    if bc_bottom_type == "no-slip" || bc_bottom_type == "no-penetration"
+        Δz1, Δz2 = Δzc_col[1], Δzc_col[2]
+        # one-side extrapolation
+        state_primitive_face⁺[:, 1] = (2*Δz1+Δz2)/(Δz1+Δz2)*state_primitive_col[:, 1] - Δz1/(Δz1+Δz2)*state_primitive_col[:, 2]
+        state_primitive_face⁺[:, 1] = bc_impose(app, state_primitive_face⁺[:, 1], bc_bottom_type, bc_bottom_n)
+        # interpolation
+        
+        Δstate⁺ = state_primitive_col[:, 2] - state_primitive_col[:, 1]
+        Δstate⁻ = state_primitive_col[:, 1] - state_primitive_face⁺[:, 1]
+        Δz⁺ = (Δz1 + Δz2)/2.0
+        Δz⁻ = Δz1/2.0
+        ∂state = limiter(Δstate⁺/Δz⁺, Δstate⁻/Δz⁻)
+        state_primitive_face⁻[:, 2] = state_primitive_col[:, 1] + ∂state * Δz1/2.0
+        
+    else
+        error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
+    end
+    
+    # populate top ghost state
+    if bc_top_type == "outlet"
+        Δz1, Δz2 = Δzc_col[Nz], Δzc_col[Nz-1]
+        # outlet state
+        state_primitive_face⁺[:, Nz + 1] = bc_top_data
+        
+        Δstate⁺ = state_primitive_col[:, Nz] - state_primitive_col[:, Nz-1]
+        Δstate⁻ = state_primitive_face⁺[:, Nz + 1] - state_primitive_col[:, Nz] 
+        Δz⁺ = (Δz1+Δz2)/2.0
+        Δz⁻ = Δz1/2.0
+        ∂state = limiter(Δstate⁺/Δz⁺, Δstate⁻/Δz⁻)
+        
+        # one-side extrapolation
+        state_primitive_face⁻[:, Nz + 1] = state_primitive_col[:, Nz] + ∂state * Δz1/2.0
+        state_primitive_face⁺[:, Nz] = state_primitive_col[:, Nz] - ∂state * Δz1/2.0
+    else
+        error("bc_top_type = ", bc_top_type, " has not implemented")   
+    end   
+end
+
 
 
 
