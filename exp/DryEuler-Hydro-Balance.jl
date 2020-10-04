@@ -89,5 +89,5 @@ end
 t_end = 100.0 # 86400.0 * 2
 Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
-hydrostatic_balance("WENO3", t_end,  Nz)
-hydrostatic_balance("WENO5", t_end,  Nz)
+# hydrostatic_balance("WENO3", t_end,  Nz)
+# hydrostatic_balance("WENO5", t_end,  Nz)

@@ -10,7 +10,10 @@ state_primitive, Δz
 state_primitive = Array(num_state_prognostic, Nz), Δz = Array(Nz)
 """
 function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
+
     Δ = zeros(size(Δ⁻))
+
+    return  Δ
     num_state = length(Δ⁻)
     for s = 1:num_state
         if Δ⁺[s] *  Δ⁻[s] > 0.0
@@ -219,7 +222,7 @@ function vertical_interface_tendency!(
                     local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     
                     
-                    if iz  == 2 && il == 1  && ix == 1
+                    if iz  == 2 && il == 1 && ix == 1
                         @info "wall + 1 state ", state_prognostic_face⁻[:, iz], state_prognostic_face⁺[:, iz], [n1;n2]
                         @info "wall + 1 flux ", sM * local_flux
                     end
