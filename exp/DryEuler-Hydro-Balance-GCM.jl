@@ -77,10 +77,10 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     ax1.set_xlabel("ρ")
 
 
-    ax2.plot(w0, alt, "-o", fillstyle = "none", label = "Ref")
-    ax2.plot(w, alt, "-", fillstyle = "none", label = vertical_method)
+    ax2.plot(sqrt.(u0.^2 + w0.^2), zz, "-o", fillstyle = "none", label = "Ref")
+    ax2.plot(sqrt.(u.^2 + w.^2), zz, "-", fillstyle = "none", label = vertical_method)
     ax2.legend()
-    ax2.set_xlabel("w")
+    ax2.set_xlabel("|v|")
 
     ax3.plot(p0, alt, "-o", fillstyle = "none", label = "Ref")
     ax3.plot(p, alt, "-", fillstyle = "none", label = vertical_method)

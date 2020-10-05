@@ -76,6 +76,7 @@ function adv_square(test_case::String, vertical_method::String, t_end::Float64=3
     coord_x = reshape(mesh.vol_l_geo[1,:,:], (Nl * Nx, Nz))[:, div(Nz, 2)] .+ Lx/2.0
     Q_x  = reshape(Q, (Nl * Nx, Nz))[:, div(Nz, 2)]
     
+    PyPlot.figure()
     PyPlot.plot(coord_z, Q0_z, "-o", fillstyle = "none", label = "Ref")
     PyPlot.plot(coord_z, Q_z, "-o", fillstyle = "none", label = vertical_method)
     PyPlot.plot(coord_x, Q_x, "-o", fillstyle = "none", label = "DG (p=3 overintegration)")

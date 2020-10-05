@@ -43,7 +43,8 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     profile = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     set_init_state!(solver, state_prognostic_0)
 
-    
+    visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_init_"*vertical_method*".png")
+
     Q = solve!(solver)
 
 
@@ -52,12 +53,14 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive)
     ρ  = reshape(state_primitive[:, 1 ,:], (Nl * Nx, Nz))[1, :]
+    u  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
     w  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
     p  = reshape(state_primitive[:, 4 ,:], (Nl * Nx, Nz))[1, :]
 
     state_primitive_0 = solver.state_primitive
     prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
     ρ0  = reshape(state_primitive_0[:, 1 ,:], (Nl * Nx, Nz))[1, :]
+    u0  = reshape(state_primitive_0[:, 3 ,:], (Nl * Nx, Nz))[1, :]
     w0  = reshape(state_primitive_0[:, 3 ,:], (Nl * Nx, Nz))[1, :]
     p0  = reshape(state_primitive_0[:, 4 ,:], (Nl * Nx, Nz))[1, :]
 
@@ -71,10 +74,10 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     ax1.set_xlabel("ρ")
 
 
-    ax2.plot(w0, zz, "-o", fillstyle = "none", label = "Ref")
-    ax2.plot(w, zz, "-", fillstyle = "none", label = vertical_method)
+    ax2.plot(sqrt.(u0.^2 + w0.^2), zz, "-o", fillstyle = "none", label = "Ref")
+    ax2.plot(sqrt.(u.^2 + w.^2), zz, "-", fillstyle = "none", label = vertical_method)
     ax2.legend()
-    ax2.set_xlabel("w")
+    ax2.set_xlabel("|v|")
 
     ax3.plot(p0, zz, "-o", fillstyle = "none", label = "Ref")
     ax3.plot(p, zz, "-", fillstyle = "none", label = vertical_method)
