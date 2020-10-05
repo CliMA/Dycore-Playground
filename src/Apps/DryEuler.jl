@@ -16,6 +16,8 @@ mutable struct DryEuler <: Application
     
     bc_right_type::String
     bc_right_data::Union{Array{Float64, 1}, Nothing}
+
+    use_ref_state::Bool
     
     
     
@@ -39,8 +41,10 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     # constant
     if gravity == false
         g = 0.0
+        use_ref_state = false
     else
         g = 9.8
+        use_ref_state = true
     end
     
     γ = 1.4
@@ -52,6 +56,7 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     bc_top_type, bc_top_data,
     bc_left_type, bc_left_data,
     bc_right_type, bc_right_data,
+    use_ref_state,
     g, γ, Rd, MSLP)
 end
 

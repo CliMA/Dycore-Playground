@@ -22,6 +22,8 @@ mutable struct Adv <: Application
     bc_right_type::String
     bc_right_data::Union{Array{Float64, 1}, Nothing}
 
+    use_ref_state::Bool
+
     # constant advection velocity
     u::Float64
     w::Float64
@@ -39,12 +41,14 @@ function Adv(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1}, N
     num_state_prognostic = 1
     num_state_diagnostic = 1
     num_state_auxiliary = 0
+    use_ref_state = false
     
     Adv(num_state_prognostic, num_state_diagnostic, num_state_auxiliary,
     bc_bottom_type, bc_bottom_data,
     bc_top_type, bc_top_data,
     bc_left_type, bc_left_data,
     bc_right_type, bc_right_data,
+    use_ref_state,
     u, w, α)
 end
 
