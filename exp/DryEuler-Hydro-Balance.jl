@@ -43,11 +43,6 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     profile = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     set_init_state!(solver, state_prognostic_0)
 
-    Δz = mesh.Δzc[1, 1, 1]
-    state_primitive_0 = solver.state_primitive
-    prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
-    @info (state_primitive_0[1, 4, 1 ] - state_primitive_0[1, 4, 1 + Nx]), (state_prognostic_0[1, 1, 1 + Nx] + state_prognostic_0[1, 1, 1])/2.0 * app.g * Δz
-    @info app.g * Δz * profile(Δz)[3]
     
     Q = solve!(solver)
 

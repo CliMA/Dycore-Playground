@@ -173,12 +173,10 @@ function vertical_interface_tendency!(
             p_aux_id = 4
             p_ref_sur_col = [state_auxiliary_surf_v[il,  p_aux_id, 1, id_col] ; state_auxiliary_surf_v[il,  p_aux_id, 2, id_col[end]]]
             p_ref_vol_col = state_auxiliary_vol_l[il, p_aux_id, id_col]
-
             state_primitive_col[4, :] .-= p_ref_vol_col
-
-
             bc_top_data_ = copy(bc_top_data)
             bc_top_data_[4] -= p_ref_sur_col[end]
+
 
             reconstruction_1d(app, 
             state_primitive_col, Δzc_col,
@@ -188,12 +186,8 @@ function vertical_interface_tendency!(
 
             state_primitive_face⁻[4, :] .+= p_ref_sur_col
             state_primitive_face⁺[4, :] .+= p_ref_sur_col
-            # @show state_primitive_face⁺[4, end-1] , p_ref_sur_col[end-1]
-            # @show state_primitive_face⁺[4, end] , p_ref_sur_col[end]
-            # @show state_primitive_face⁻[4, end] , p_ref_sur_col[end]
-            # state_primitive_face⁺[4, end] = state_primitive_face⁻[4, end]
-
-            # error("stop")
+            
+            
 
 
             
@@ -233,10 +227,7 @@ function vertical_interface_tendency!(
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
                     end
-                    if il == 1 && ix == 1
-                        @info "wall state ", state_prognostic_face⁺[:, iz]
-                        @info "wall flux ", sM * local_flux
-                    end
+
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
                     
                     
@@ -270,16 +261,10 @@ function vertical_interface_tendency!(
                     local_aux⁻ = state_auxiliary_surf_v[il, :,  end, e⁻]
                     local_aux⁺ = state_auxiliary_surf_v[il, :,  1, e⁺] 
                     
-                    (n1, n2, sM) = sgeo_v[:, il, end, e⁻] 
-                    
+                    (n1, n2, sM) = sgeo_v[:, il, end, e⁻]    
                     
                     local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     
-                    
-                    if iz  == 2 && il == 1 && ix == 1
-                        @info "wall + 1 state ", state_prognostic_face⁻[:, iz], state_prognostic_face⁺[:, iz], [n1;n2]
-                        @info "wall + 1 flux ", sM * local_flux
-                    end
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
                     

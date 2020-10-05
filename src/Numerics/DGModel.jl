@@ -183,17 +183,9 @@ function source_tendency!(
             for il = 1:Nl
                 x, z, M = vol_l_geo[:, il, e]
 
-                
-
     
                 tendency[il, :, e] += source(app, local_states_l[il, :], local_aux_l[il, :]) * M
 
-
-                if il == 1 && iz == 1 && ix == 1
-                    @info "local_states : ", local_states_l[il, :]
-                    @info "source ", source(app, local_states_l[il, :], local_aux_l[il, :]) * M
-                    @info "tendency[il, :, e] :", tendency[il, :, e]
-                end
 
                 
             end

@@ -382,14 +382,6 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
         end
     end
     
-    @info state_primitive[1, 4, 1 + (Nz-1)*Nx] ,  state_auxiliary_vol_l[1, p_aux_id, 1 + (Nz-1)*Nx]
-
-    @info state_primitive[1, 4, 1 + (2-1)*Nx] ,  state_auxiliary_vol_l[1, p_aux_id, 1 + (2-1)*Nx]
-    @info state_primitive[1, 4, 1 ] ,  state_auxiliary_vol_l[1, p_aux_id, 1 ]
-
-    # error("stop")
-    
-    
     
 end
 
@@ -423,10 +415,7 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
             
             Φ = state_auxiliary[il, 1, e]
             
-            
-            
             Tv, p, ρ = profile(Φ/g)
-            # @info il, state_auxiliary[il, :, e], alt, Tv, p, ρ , Φ/g
             
             
             ρu = ρ*u_init
