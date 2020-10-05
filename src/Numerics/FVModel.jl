@@ -83,6 +83,8 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
     bc_top_type::String, bc_top_data::Union{Array{Float64, 1}, Nothing}, bc_top_n::Union{Array{Float64, 1}, Nothing},
     state_primitive_face⁻::Array{Float64, 2}, state_primitive_face⁺::Array{Float64, 2})
     
+    Nz = length(Δzc_col)
+
     if app.use_ref_state
         # reconstruct p - pref
         p_aux_id = 4
@@ -264,9 +266,6 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
                     
-                    if ix == 1
-                        @show iz, il, sM * local_flux
-                    end
                     
                     # top 
                 elseif iz == Nz+1
@@ -304,10 +303,6 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
-
-                    if ix == 1 && iz == 2
-                        @show iz, il, sM * local_flux
-                    end
                     
                     
                 end

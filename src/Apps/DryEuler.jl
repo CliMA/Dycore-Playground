@@ -43,7 +43,7 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
         g = 0.0
         use_ref_state = false
     else
-        g = 10.0
+        g = 9.8
         use_ref_state = true
     end
     
@@ -157,7 +157,6 @@ function flux_first_order(app::DryEuler, state_prognostic::Array{Float64, 1}, st
     e_int = internal_energy(app, ρ, ρu, ρe, Φ)
     p = air_pressure(app, ρ,  e_int)
 
-    @show p, p_ref
     
     return flux_first_order(app, ρ, ρu, ρe, p, p_ref)
 end
@@ -215,8 +214,6 @@ function numerical_flux_first_order(app::DryEuler,
     flux⁻ = flux_first_order(app, ρ⁻, ρu⁻, ρe⁻, p⁻, p_ref⁻) * n_ij
     flux⁺ = flux_first_order(app, ρ⁺, ρu⁺, ρe⁺, p⁺, p_ref⁺) * n_ij
 
-    @show p⁻, p_ref⁻, flux⁻ 
-    @show p⁺, p_ref⁺, flux⁺
     
     un⁻= u⁻' * n_ij
     ut⁻= u⁻' * t_ij

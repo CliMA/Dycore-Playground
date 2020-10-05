@@ -42,7 +42,7 @@ function Adv(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1}, N
     num_state_diagnostic = 1
     num_state_auxiliary = 0
     use_ref_state = false
-    
+
     Adv(num_state_prognostic, num_state_diagnostic, num_state_auxiliary,
     bc_bottom_type, bc_bottom_data,
     bc_top_type, bc_top_data,
@@ -119,6 +119,10 @@ function init_state_auxiliary!(app::Adv, mesh::Mesh,
     
 end
 
+function update_state_auxiliary!(app::Adv, mesh::Mesh, state_primitive::Array{Float64, 3},
+    state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
+    state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
+end
 
 function bc_impose(app::Adv, state_primitive::Array{Float64, 1}, bc_type::String, n::Array{Float64, 1})
     @warn("Adv bc_impose")

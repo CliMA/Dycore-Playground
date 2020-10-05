@@ -410,8 +410,6 @@ function visual(mesh::Mesh, state::Array{Float64, 2}, save_file_name::String="No
     x, z = reshape(vol_l_geo[1,:,:], (Nl * Nx, Nz)) , reshape(vol_l_geo[2,:,:], (Nl * Nx, Nz)) 
 
     data = reshape(state, (Nl * Nx, Nz))
-
-    @info "data : ", data
     
     PyPlot.pcolormesh(x, z, data, shading = "gouraud", cmap = "jet")
     PyPlot.colorbar()
