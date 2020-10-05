@@ -152,6 +152,7 @@ function flux_first_order(app::DryEuler, state_prognostic::Array{Float64, 1}, st
     Φ = state_auxiliary[1]
 
     p_ref = state_auxiliary[4]
+ 
     
     u = ρu/ρ
     e_int = internal_energy(app, ρ, ρu, ρe, Φ)
@@ -195,6 +196,8 @@ function numerical_flux_first_order(app::DryEuler,
     
     Φ = state_auxiliary⁻[1]
     p_ref⁻, p_ref⁺ = state_auxiliary⁻[4], state_auxiliary⁺[4]
+  
+
     γ = app.γ
     
     ρ⁻, ρu⁻, ρe⁻ = state_prognostic⁻[1], state_prognostic⁻[2:dim+1], state_prognostic⁻[dim+2]
@@ -275,6 +278,7 @@ function wall_flux_first_order(app::DryEuler,
     p = air_pressure(app, ρ,  e_int)
     
     p_ref = state_auxiliary[4]
+
     return [0.0, (p - p_ref) * n[1] , (p - p_ref) * n[2], 0.0]
 end
 
@@ -282,6 +286,8 @@ end
 function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     ρ = state_prognostic[1]
     ρ_ref = state_auxiliary[5]
+
+
     ∇Φ = state_auxiliary[2:3]
     return [0.0; -(ρ - ρ_ref)*∇Φ; 0.0]
 end

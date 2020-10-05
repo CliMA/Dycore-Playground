@@ -7,16 +7,16 @@ import PyPlot
 
 function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz::Int64=32)
     
-    Np = 1
+    Np = 3
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
     topology_type = "AtmoGCM"
     
     
     
-    Nx = 4
-    r = 1.0
-    R = r + 2.0
+    Nx = 32
+    r = 6371e3
+    R = r + 30e3
     
     
     topology_size = [r; R]
@@ -31,7 +31,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
     app = DryEuler("no-penetration", nothing, "outlet", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity)
     
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
     solver = Solver(app, mesh, params)
     
     
@@ -47,7 +47,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
 
     visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_GCM_init_"*vertical_method*".png")
 
-
+ 
     Q = solve!(solver)
 
 
@@ -92,8 +92,8 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
 end
 
-t_end =  1.0 #86400.0 
-Nz = 2
+t_end =  86400.0 
+Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
-#hydrostatic_balance("WENO3", t_end,  Nz)
-#hydrostatic_balance("WENO5", t_end,  Nz)
+hydrostatic_balance("WENO3", t_end,  Nz)
+hydrostatic_balance("WENO5", t_end,  Nz)

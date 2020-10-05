@@ -46,7 +46,7 @@ function (profile::DecayingTemperatureProfile)(
 
     # @info z
     # ρ = 1.0
-    # p = 3*_grav - _grav*ρ*z
+    # p = _MSLP - _grav*ρ*z
     # Tv = NaN64
  
     return (Tv, p, ρ)

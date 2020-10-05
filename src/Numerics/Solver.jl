@@ -234,14 +234,13 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     # @show "horizontal_volume_tendency! ", norm(dQ)
 
 
-    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
-    # @show "vertical_interface_tendency! ", norm(dQ)
-
-
-
     
     horizontal_interface_tendency!(app, mesh, Q, state_auxiliary_surf_h, dQ)
     # @show "horizontal_interface_tendency! ", norm(dQ)
+
+
+    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
+    # @show "vertical_interface_tendency! ", norm(dQ)
 
 
    
@@ -276,6 +275,8 @@ function compute_cfl_dt(app::Application, mesh::Mesh, Q::Array{Float64,3}, Q_aux
         
         for il = 1:Nl
             u = compute_wave_speed(app, Q[il, :, e], Q_aux[il, :, e])
+
+    
             
             dt_h = min(dt_h, cfl * Δs_min[1, il, e]/u)
             
