@@ -43,7 +43,7 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
         g = 0.0
         use_ref_state = false
     else
-        g = 9.8
+        g = 10.0
         use_ref_state = true
     end
     
@@ -150,24 +150,30 @@ function flux_first_order(app::DryEuler, state_prognostic::Array{Float64, 1}, st
     dim = 2
     ρ, ρu, ρe = state_prognostic[1], state_prognostic[2:dim+1], state_prognostic[dim+2]
     Φ = state_auxiliary[1]
+
+    p_ref = state_auxiliary[4]
     
     u = ρu/ρ
     e_int = internal_energy(app, ρ, ρu, ρe, Φ)
     p = air_pressure(app, ρ,  e_int)
+
+    @show p, p_ref
     
-    return flux_first_order(app, ρ, ρu, ρe, p)
+    return flux_first_order(app, ρ, ρu, ρe, p, p_ref)
 end
 
 
-function flux_first_order(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, p::Float64)
+function flux_first_order(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, p::Float64, p_ref::Float64)
+    
     
     
     u = ρu/ρ
     flux = 
     [ρu[1] ρu[2];
-    ρu[1]*u[1]+p   ρu[1]*u[2];
-    ρu[2]*u[1]     ρu[2]*u[2]+p; 
+    ρu[1]*u[1]+p-p_ref   ρu[1]*u[2];
+    ρu[2]*u[1]     ρu[2]*u[2]+p-p_ref; 
     (ρe+p)*u[1]    (ρe+p)*u[2]]
+
     
     return flux
 end
@@ -189,6 +195,7 @@ function numerical_flux_first_order(app::DryEuler,
     t_ij = [-n_ij[2], n_ij[1]]
     
     Φ = state_auxiliary⁻[1]
+    p_ref⁻, p_ref⁺ = state_auxiliary⁻[4], state_auxiliary⁺[4]
     γ = app.γ
     
     ρ⁻, ρu⁻, ρe⁻ = state_prognostic⁻[1], state_prognostic⁻[2:dim+1], state_prognostic⁻[dim+2]
@@ -205,8 +212,11 @@ function numerical_flux_first_order(app::DryEuler,
     a⁺ = soundspeed_air(app, ρ⁺,  p⁺)
     h⁺ = total_specific_enthalpy(app, ρe⁺, ρ⁺,  p⁺)
     
-    flux⁻ = flux_first_order(app, ρ⁻, ρu⁻, ρe⁻, p⁻) * n_ij
-    flux⁺ = flux_first_order(app, ρ⁺, ρu⁺, ρe⁺, p⁺) * n_ij
+    flux⁻ = flux_first_order(app, ρ⁻, ρu⁻, ρe⁻, p⁻, p_ref⁻) * n_ij
+    flux⁺ = flux_first_order(app, ρ⁺, ρu⁺, ρe⁺, p⁺, p_ref⁺) * n_ij
+
+    @show p⁻, p_ref⁻, flux⁻ 
+    @show p⁺, p_ref⁺, flux⁺
     
     un⁻= u⁻' * n_ij
     ut⁻= u⁻' * t_ij
@@ -267,14 +277,16 @@ function wall_flux_first_order(app::DryEuler,
     e_int = internal_energy(app, ρ, ρu, ρe, Φ)
     p = air_pressure(app, ρ,  e_int)
     
-    return [0.0, p * n[1] , p * n[2], 0.0]
+    p_ref = state_auxiliary[4]
+    return [0.0, (p - p_ref) * n[1] , (p - p_ref) * n[2], 0.0]
 end
 
 
 function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     ρ = state_prognostic[1]
+    ρ_ref = state_auxiliary[5]
     ∇Φ = state_auxiliary[2:3]
-    return [0.0; -ρ*∇Φ; 0.0]
+    return [0.0; -(ρ - ρ_ref)*∇Φ; 0.0]
 end
 
 
@@ -287,26 +299,27 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
     
     g = app.g
     topology_type = mesh.topology_type
+    ϕl_q = mesh.ϕl_q
     
     if topology_type == "AtmoLES"
         
         x, z = vol_l_geo[1, :, :], vol_l_geo[2, :, :]
-        state_auxiliary_vol_l[:, 1, :]  = g*z
+        state_auxiliary_vol_l[:, 1, :] .= g*z
         state_auxiliary_vol_l[:, 2, :] .= 0.0
         state_auxiliary_vol_l[:, 3, :] .= g
         
-        x, z = vol_q_geo[6, :, :], vol_q_geo[7, :, :]
-        state_auxiliary_vol_q[:, 1, :]  = g*z
-        state_auxiliary_vol_q[:, 2, :] .= 0.0
-        state_auxiliary_vol_q[:, 3, :] .= g
+        
+        state_auxiliary_vol_q[:, 1, :] .= ϕl_q * state_auxiliary_vol_l[:, 1, :]
+        state_auxiliary_vol_q[:, 2, :] .= ϕl_q * state_auxiliary_vol_l[:, 2, :]
+        state_auxiliary_vol_q[:, 3, :] .= ϕl_q * state_auxiliary_vol_l[:, 3, :]
         
         x, z = sgeo_h[4, :, :, :], sgeo_h[5, :, :, :] 
-        state_auxiliary_surf_h[:, 1, :, :]  = g*z
+        state_auxiliary_surf_h[:, 1, :, :] .= g*z
         state_auxiliary_surf_h[:, 2, :, :] .= 0.0
         state_auxiliary_surf_h[:, 3, :, :] .= g
         
         x, z = sgeo_v[4, :, :, :], sgeo_v[5, :, :, :] 
-        state_auxiliary_surf_v[:, 1, :, :]  = g*z
+        state_auxiliary_surf_v[:, 1, :, :] .= g*z
         state_auxiliary_surf_v[:, 2, :, :] .= 0.0
         state_auxiliary_surf_v[:, 3, :, :] .= g
         
@@ -314,26 +327,26 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
         # The center is at [0, 0]
         
         x, z = vol_l_geo[1, :, :], vol_l_geo[2, :, :]
-        r = sqrt(x.^2 + z.^2)
-        state_auxiliary_vol_l[:, 1, :] .= g * (r - mesh.topology_size[1])
+        r = sqrt.(x.^2 + z.^2)
+        state_auxiliary_vol_l[:, 1, :] .= g * (r .- mesh.topology_size[1])
         state_auxiliary_vol_l[:, 2, :] .= g * x./r
         state_auxiliary_vol_l[:, 3, :] .= g * z./r
         
-        x, z = vol_q_geo[6, :, :], vol_l_geo[7, :, :]
-        r = sqrt(x.^2 + z.^2)
-        state_auxiliary_vol_q[:, 1, :] .= g * (r - mesh.topology_size[1])
-        state_auxiliary_vol_q[:, 2, :] .= g * x./r
-        state_auxiliary_vol_q[:, 3, :] .= g * z./r
+        x, z = vol_q_geo[6, :, :], vol_q_geo[7, :, :]
+        r = sqrt.(x.^2 + z.^2)
+        state_auxiliary_vol_q[:, 1, :] .= ϕl_q * state_auxiliary_vol_l[:, 1, :]
+        state_auxiliary_vol_q[:, 2, :] .= ϕl_q * state_auxiliary_vol_l[:, 2, :]
+        state_auxiliary_vol_q[:, 3, :] .= ϕl_q * state_auxiliary_vol_l[:, 3, :]
         
         x, z = sgeo_h[4, :, :, :], sgeo_h[5, :, :, :] 
-        r = sqrt(x.^2 + z.^2)
-        state_auxiliary_surf_h[:, 1, :, :] .= g * (r - mesh.topology_size[1])
+        r = sqrt.(x.^2 + z.^2)
+        state_auxiliary_surf_h[:, 1, :, :] .= g * (r .- mesh.topology_size[1])
         state_auxiliary_surf_h[:, 2, :, :] .= g * x./r
         state_auxiliary_surf_h[:, 3, :, :] .= g * z./r
         
         x, z = sgeo_v[4, :, :, :], sgeo_v[5, :, :, :] 
-        r = sqrt(x.^2 + z.^2)
-        state_auxiliary_surf_v[:, 1, :, :] .= g * (r - mesh.topology_size[1])
+        r = sqrt.(x.^2 + z.^2)
+        state_auxiliary_surf_v[:, 1, :, :] .= g * (r .- mesh.topology_size[1])
         state_auxiliary_surf_v[:, 2, :, :] .= g * x./r
         state_auxiliary_surf_v[:, 3, :, :] .= g * z./r
         
@@ -346,6 +359,8 @@ end
 function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Array{Float64, 3},
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
+
+    if !app.use_ref_state;  return;   end
     # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
     p_aux_id , ρ_aux_id = 4 , 5
     Nx, Nz, Δzc = mesh.Nx, mesh.Nz, mesh.Δzc
@@ -421,8 +436,7 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
             Φ = state_auxiliary[il, 1, e]
             
             Tv, p, ρ = profile(Φ/g)
-            
-            
+
             ρu = ρ*u_init
             ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
             

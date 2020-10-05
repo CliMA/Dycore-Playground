@@ -37,6 +37,7 @@ function horizontal_volume_tendency!(
             
             for s = 1:num_state_prognostic
                 local_states_q[:, s] =  ϕl_q * local_states_l[:, s]
+                @info "local_states_q[:, s] =  ϕl_q * local_states_l[:, s] ", local_states_q[:, s] ,  local_states_l[:, s]
             end
             
             for iq = 1:Nq
@@ -116,6 +117,10 @@ function horizontal_interface_tendency!(
                 else
                     error("bc_left_type = ", bc_left_type, " has not implemented")   
                 end
+
+                if ix == 1 && iz == 1
+                    @show local_state⁻, sM*[n1;n2], [n1;n2], sM * local_flux, sgeo_h[:, 1, 1, e⁺] 
+                end
                 
                 tendency[1,   :, e⁺] .+= sM * local_flux
                 
@@ -137,13 +142,22 @@ function horizontal_interface_tendency!(
                 tendency[end, :, e⁻] .-= sM * local_flux
                 
             else
+
+                
+
                 (n1, n2, sM) = sgeo_h[:, 1, end, e⁻] 
 
                 
+
                 local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [n1;n2])
                 
                 tendency[1,   :, e⁺] .+= sM * local_flux
                 tendency[end, :, e⁻] .-= sM * local_flux
+
+
+                if ix == 2 && iz == 1
+                    @show ix,  n1, n2, sM, sgeo_h[:, 1, end, e⁻] 
+                end
                 
             end
         end

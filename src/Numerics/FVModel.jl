@@ -264,6 +264,9 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
                     
+                    if ix == 1
+                        @show iz, il, sM * local_flux
+                    end
                     
                     # top 
                 elseif iz == Nz+1
@@ -301,6 +304,10 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
+
+                    if ix == 1 && iz == 2
+                        @show iz, il, sM * local_flux
+                    end
                     
                     
                 end

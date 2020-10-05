@@ -228,21 +228,47 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
 
 
     update_state_auxiliary!(app, mesh, state_primitive , state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
-    
-    
-    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
-    # @show "horizontal_volume_tendency! ", norm(dQ)
-    
+
+  
+
+
+
+
+    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
+    @show "vertical_interface_tendency! ", norm(dQ)
+
+    @info dQ[:, :, 1]
+
+
     
     horizontal_interface_tendency!(app, mesh, Q, state_auxiliary_surf_h, dQ)
-    # @show "horizontal_interface_tendency! ", norm(dQ)
-    
-    
-    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
-    # @show "vertical_interface_tendency! ", norm(dQ)
+    @show "horizontal_interface_tendency! ", norm(dQ)
+    @info dQ[:, :, 1]
+
+
+   
+
+
 
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
-    # @show "source_tendency! ", norm(dQ)
+    @show "source_tendency! ", norm(dQ)
+    @info dQ[:, :, 1]
+
+
+    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
+    @show "horizontal_volume_tendency! ", norm(dQ)
+    @info dQ[:, :, 1]
+    
+    
+    
+
+    
+    
+  
+
+
+    error("stop")
+    
 
     
     M_lumped = @view mesh.vol_l_geo[3, :, :]

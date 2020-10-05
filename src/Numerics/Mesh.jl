@@ -282,6 +282,8 @@ function compute_geometry(topology::Array{Float64, 3},
             
             # Volume quantities at Nl Gauss-Legendre-Lobatto points
             for i = 1: Nl
+                
+
                 x  = xe[i, 1]*ϕl¹_q[1] + xe[i,2]*ϕl¹_q[2]
                 z  = ze[i, 1]*ϕl¹_q[1] + ze[i,2]*ϕl¹_q[2]
                 
@@ -408,7 +410,8 @@ function visual(mesh::Mesh, state::Array{Float64, 2}, save_file_name::String="No
     x, z = reshape(vol_l_geo[1,:,:], (Nl * Nx, Nz)) , reshape(vol_l_geo[2,:,:], (Nl * Nx, Nz)) 
 
     data = reshape(state, (Nl * Nx, Nz))
-    
+
+    @info "data : ", data
     
     PyPlot.pcolormesh(x, z, data, shading = "gouraud", cmap = "jet")
     PyPlot.colorbar()
