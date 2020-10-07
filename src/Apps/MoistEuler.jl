@@ -19,7 +19,7 @@ mutable struct MoistEuler <: Application
 
     use_ref_state::Bool
     
-    
+    param_set
     
     g::Float64
     γ::Float64
@@ -33,8 +33,9 @@ function MoistEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64
     bc_right_type::String,   bc_right_data::Union{Array{Float64, 1}, Nothing},
     gravity::Bool)
     
-    num_state_prognostic = 4
-    num_state_diagnostic = 4
+    # ρ ρu ρe ρq_tot; primitive variables ρ u q q_tot
+    num_state_prognostic = 5 
+    num_state_diagnostic = 5
     # Φ ∇Φ ρ_ref p_ref
     num_state_auxiliary = 5
     
@@ -61,46 +62,7 @@ function MoistEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64
 end
 
 
-function internal_energy(app::MoistEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, Φ::Float64)
-    ρinv = 1 / ρ
-    ρe_int = ρe - ρinv * sum(abs2, ρu) / 2 - ρ*Φ
-    e_int = ρinv * ρe_int
-    return e_int
-end
 
-# e_int = CᵥT = p/(ρ(γ-1))
-function air_pressure(app::MoistEuler, ρ::Float64,  e_int::Float64)
-    γ = app.γ
-    p = e_int*ρ*(γ - 1)
-    return p
-    
-end
-
-function soundspeed_air(app::MoistEuler, ρ::Float64,  p::Float64)
-    γ = app.γ
-    return sqrt(γ * p / ρ)
-end
-
-function total_specific_enthalpy(app::MoistEuler, ρe::Float64, ρ::Float64, p::Float64)
-    return (ρe + p)/ρ
-end
-
-function compute_wave_speed(app::MoistEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
-    # c + |u|
-    dim = 2
-    ρ, ρu, ρe = state_prognostic[1], state_prognostic[2:dim+1], state_prognostic[dim+2]
-    Φ = state_auxiliary[1]
-    
-    u = ρu/ρ
-    e_int = internal_energy(app, ρ, ρu, ρe, Φ)
-    p = air_pressure(app, ρ,  e_int)
-    
-    c = soundspeed_air(app, ρ,  p)
-    
-    return c + sqrt(u[1]^2 + u[2]^2)
-    
-    
-end
 
 
 function prog_to_prim(app::MoistEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
@@ -129,13 +91,6 @@ function prim_to_prog(app::MoistEuler, state_primitive::Array{Float64, 1}, state
 end
 
 
-# function prim_to_prog!(app::MoistEuler, state_primitive::Array{Float64, 2}, state_auxiliary::Array{Float64, 2}, state_prognostic::Array{Float64, 2})
-#     # state_primitive = size(num_state_prognostic, Nz+1)
-#     for iz = 1:size(state_primitive, 2)
-#         state_prognostic[:, iz] .= prim_to_prog(app, state_primitive[:, iz], state_auxiliary[:, iz])
-#     end
-# end
-
 function prog_to_prim!(app::MoistEuler, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3}, state_primitive::Array{Float64, 3})
     # state_primitive = size(Nl, num_state_prognostic, Nz+1)
     for il = 1:size(state_prognostic, 1)
@@ -148,31 +103,69 @@ end
 function flux_first_order(app::MoistEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     
     dim = 2
-    ρ, ρu, ρe = state_prognostic[1], state_prognostic[2:dim+1], state_prognostic[dim+2]
+    ρ, ρu, ρe, ρq_t = state_prognostic[1], state_prognostic[2:dim+1], state_prognostic[dim+2], state_prognostic[dim+3]
     Φ = state_auxiliary[1]
 
     p_ref = state_auxiliary[4]
  
     
-    u = ρu/ρ
+    # ts = recover_thermo_state(m, state, aux)
+    # p = air_pressure(ts)
+
     e_int = internal_energy(app, ρ, ρu, ρe, Φ)
-    p = air_pressure(app, ρ,  e_int)
+
+    q_t = ρq_t/ρ
+
+    PhaseEquil{eltype(state), typeof(atmos.param_set)}(
+        atmos.param_set,
+        e_int,
+        state.ρ,
+        state.moisture.ρq_tot / state.ρ,
+        aux.moisture.temperature,
+    )
+
+    T = saturation_adjustment(
+        param_set,
+        e_int,
+        ρ,
+        q_t)
+
+
+
+
+    _liquid_frac = liquid_fraction(param_set, T, phase_type)                    # fraction of condensate that is liquid
+    q_c = saturation_excess(param_set, T, ρ, phase_type, PhasePartition(q_tot)) # condensate specific humidity
+    q_liq = _liquid_frac * q_c                                                  # liquid specific humidity
+    q_ice = (1 - _liquid_frac) * q_c                                            # ice specific humidity
+
+
+
+
+        air_pressure(ts::ThermodynamicState) = air_pressure(
+    ts.param_set,
+    air_temperature(ts),
+    air_density(ts),
+    PhasePartition(ts),
+)
+
+    p = air_pressure(app, ρ,  T,  q)
 
     
-    return flux_first_order(app, ρ, ρu, ρe, p, p_ref)
+    return flux_first_order(app, ρ, ρu, ρe, ρq_t, p, p_ref)
 end
 
 
-function flux_first_order(app::MoistEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, p::Float64, p_ref::Float64)
+function flux_first_order(app::MoistEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, ρq_t::Float64, p::Float64, p_ref::Float64)
     
     
     
     u = ρu/ρ
     flux = 
-    [ρu[1] ρu[2];
+    [ρu[1]               ρu[2];
     ρu[1]*u[1]+p-p_ref   ρu[1]*u[2];
-    ρu[2]*u[1]     ρu[2]*u[2]+p-p_ref; 
-    (ρe+p)*u[1]    (ρe+p)*u[2]]
+    ρu[2]*u[1]           ρu[2]*u[2]+p-p_ref; 
+    (ρe+p)*u[1]         (ρe+p)*u[2];
+    ρq_t*u[1]            ρq_t*u[2]]
 
     
     return flux
@@ -293,200 +286,17 @@ function source(app::MoistEuler, state_prognostic::Array{Float64, 1}, state_auxi
 end
 
 
-# The auxiliary state has Φ and ∇Φ
-function init_state_auxiliary!(app::MoistEuler, mesh::Mesh, 
-    state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
-    state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
-    
-    vol_l_geo, vol_q_geo, sgeo_h, sgeo_v = mesh.vol_l_geo, mesh.vol_q_geo, mesh.sgeo_h, mesh.sgeo_v
-    
-    g = app.g
-    topology_type = mesh.topology_type
-    ϕl_q = mesh.ϕl_q
-    
-    if topology_type == "AtmoLES"
-        
-        x, z = vol_l_geo[1, :, :], vol_l_geo[2, :, :]
-        state_auxiliary_vol_l[:, 1, :] .= g*z
-        state_auxiliary_vol_l[:, 2, :] .= 0.0
-        state_auxiliary_vol_l[:, 3, :] .= g
-        
-        
-        state_auxiliary_vol_q[:, 1, :] .= ϕl_q * state_auxiliary_vol_l[:, 1, :]
-        state_auxiliary_vol_q[:, 2, :] .= ϕl_q * state_auxiliary_vol_l[:, 2, :]
-        state_auxiliary_vol_q[:, 3, :] .= ϕl_q * state_auxiliary_vol_l[:, 3, :]
-        
-        x, z = sgeo_h[4, :, :, :], sgeo_h[5, :, :, :] 
-        state_auxiliary_surf_h[:, 1, :, :] .= g*z
-        state_auxiliary_surf_h[:, 2, :, :] .= 0.0
-        state_auxiliary_surf_h[:, 3, :, :] .= g
-        
-        x, z = sgeo_v[4, :, :, :], sgeo_v[5, :, :, :] 
-        state_auxiliary_surf_v[:, 1, :, :] .= g*z
-        state_auxiliary_surf_v[:, 2, :, :] .= 0.0
-        state_auxiliary_surf_v[:, 3, :, :] .= g
-        
-    elseif topology_type == "AtmoGCM"
-        # The center is at [0, 0]
-        
-        x, z = vol_l_geo[1, :, :], vol_l_geo[2, :, :]
-        r = sqrt.(x.^2 + z.^2)
-        state_auxiliary_vol_l[:, 1, :] .= g * (r .- mesh.topology_size[1])
-        state_auxiliary_vol_l[:, 2, :] .= g * x./r
-        state_auxiliary_vol_l[:, 3, :] .= g * z./r
-        
-        x, z = vol_q_geo[6, :, :], vol_q_geo[7, :, :]
-        r = sqrt.(x.^2 + z.^2)
-        state_auxiliary_vol_q[:, 1, :] .= ϕl_q * state_auxiliary_vol_l[:, 1, :]
-        state_auxiliary_vol_q[:, 2, :] .= ϕl_q * state_auxiliary_vol_l[:, 2, :]
-        state_auxiliary_vol_q[:, 3, :] .= ϕl_q * state_auxiliary_vol_l[:, 3, :]
-        
-        x, z = sgeo_h[4, :, :, :], sgeo_h[5, :, :, :] 
-        r = sqrt.(x.^2 + z.^2)
-        state_auxiliary_surf_h[:, 1, :, :] .= g * (r .- mesh.topology_size[1])
-        state_auxiliary_surf_h[:, 2, :, :] .= g * x./r
-        state_auxiliary_surf_h[:, 3, :, :] .= g * z./r
-        
-        x, z = sgeo_v[4, :, :, :], sgeo_v[5, :, :, :] 
-        r = sqrt.(x.^2 + z.^2)
-        state_auxiliary_surf_v[:, 1, :, :] .= g * (r .- mesh.topology_size[1])
-        state_auxiliary_surf_v[:, 2, :, :] .= g * x./r
-        state_auxiliary_surf_v[:, 3, :, :] .= g * z./r
-        
-    else
-        error("topology_type : ", topology_type, " has not implemented")
-    end
-end
-
-
-function update_state_auxiliary!(app::MoistEuler, mesh::Mesh, state_primitive::Array{Float64, 3},
-    state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
-    state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
-
-    if !app.use_ref_state;  return;   end
-    # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
-    p_aux_id , ρ_aux_id = 4 , 5
-    Nx, Nz, Δzc = mesh.Nx, mesh.Nz, mesh.Δzc
-    ϕl_q = mesh.ϕl_q
-    g =  app.g
-    Nl, num_state_auxiliary, nelem = size(state_auxiliary_vol_l)
-    
-    state_auxiliary_vol_l[:, ρ_aux_id, :] .= state_primitive[:, 1, :]
-    
-    for iz = 1:Nz
-        for ix = 1:Nx
-            e  = ix + (iz-1)*Nx
-            e⁻ = ix + (iz-2)*Nx
-            for il = 1:Nl
-                
-                
-                Δz = Δzc[il, ix, iz]
-                ρ, p = state_primitive[il, 1, e], state_primitive[il, 4, e]
-                
-                if e⁻ > 0
-                    state_auxiliary_surf_v[il,  p_aux_id, 1, e] = state_auxiliary_surf_v[il,  p_aux_id, 2, e⁻]
-                else # on the ground
-                    state_auxiliary_surf_v[il,  p_aux_id, 1, e] = p + ρ*g*Δz/2.0
-                end
-                
-                state_auxiliary_surf_v[il,  p_aux_id, 2, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz
-                state_auxiliary_vol_l[il, p_aux_id, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz/2.0
-                
-                if il == 1
-                    state_auxiliary_surf_h[1,  p_aux_id, 1, e] = state_auxiliary_vol_l[il, p_aux_id, e]
-                elseif il == Nl
-                    state_auxiliary_surf_h[1,  p_aux_id, 2, e] = state_auxiliary_vol_l[il, p_aux_id, e]
-                end
-                
-                
-            end
-            
-            state_auxiliary_vol_q[:, p_aux_id, e] .= ϕl_q * state_auxiliary_vol_l[:, p_aux_id, e]
-        end
-    end
-    
-    
-end
 
 
 
-#################################################################################################
-"""
-update state_prognostic
-and app.bc_top_data
-"""
-function init_hydrostatic_balance!(app::MoistEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3},
-    T_virt_surf::Float64, T_min_ref::Float64, H_t::Float64)
-    
-    nelem = mesh.Nx * mesh.Nz
-    Nl = mesh.Nl
-    
-    profile = DecayingTemperatureProfile(app, T_virt_surf, T_min_ref, H_t)
-    γ = app.γ
-    
-    topology_type = mesh.topology_type
-    topology_size = mesh.topology_size
-    
-    vol_l_geo = mesh.vol_l_geo
-    u_init = [0.0; 0.0]
-    
-    g = app.g
-    @assert(g > 0.0)
-    
-    for e = 1:nelem
-        for il = 1:Nl
-            
-            Φ = state_auxiliary[il, 1, e]
-            
-            Tv, p, ρ = profile(Φ/g)
 
-            ρu = ρ*u_init
-            ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
-            
-            state_prognostic[il, :, e] .= [ρ ; ρu ; ρe]
-            
-            # error("stop")
-        end
-    end
-    
-    # 
-    if app.bc_top_type == "outlet"
-        topology = mesh.topology
-        x, z = topology[:, 1, end] # anyone should be the same
-        if topology_type == "AtmoLES"
-            alt = z
-        elseif topology_type == "AtmoGCM"
-            alt = sqrt(x^2 + z^2) - topology_size[1]
-        else 
-            error("topology_type : ", topology_type, " has not implemented yet.")
-        end
-        Tv, p, ρ = profile(alt)
-        app.bc_top_data = [ρ; 0.0; 0.0; p]
-    end
-    
-    return profile
-end
 
-# initialize 
-function init_state!(app::MoistEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, func::Function)
-    
-    Nl, num_state_prognostic, nelem = size(state_prognostic)
-    vol_l_geo = mesh.vol_l_geo
-    
-    for e = 1:nelem
-        for il = 1:Nl
-            
-            x, z = vol_l_geo[1:2, il, e]
-            
-            state_prognostic[il, :, e] .= func(x, z)
-        end
-    end
-end
+
 
 
 function bc_impose(app::MoistEuler, state_primitive::Array{Float64, 1}, bc_type::String, n::Array{Float64, 1})
     
-    ρ, u, p = state_primitive[1], state_primitive[2:3], state_primitive[4]
+    u = state_primitive[2:3]
     if bc_type == "no-slip"
         u_g = [0.0 ;0.0]
     elseif bc_type == "no-penetration"
@@ -495,7 +305,7 @@ function bc_impose(app::MoistEuler, state_primitive::Array{Float64, 1}, bc_type:
     else
         error("bc_type  : ", bc_type )
     end
-    return [ρ ; u_g ; p ]
+    return [state_primitive[1] ; u_g ; state_primitive[4:end] ]
 end
 
 function MoistEuler_test()
