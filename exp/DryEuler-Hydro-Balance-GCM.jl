@@ -56,14 +56,14 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive)
     ρ  = reshape(state_primitive[:, 1 ,:], (Nl * Nx, Nz))[1, :]
-    u  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
+    u  = reshape(state_primitive[:, 2 ,:], (Nl * Nx, Nz))[1, :]
     w  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
     p  = reshape(state_primitive[:, 4 ,:], (Nl * Nx, Nz))[1, :]
 
     state_primitive_0 = solver.state_primitive
     prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
     ρ0  = reshape(state_primitive_0[:, 1 ,:], (Nl * Nx, Nz))[1, :]
-    u0  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
+    u0  = reshape(state_primitive_0[:, 2 ,:], (Nl * Nx, Nz))[1, :]
     w0  = reshape(state_primitive_0[:, 3 ,:], (Nl * Nx, Nz))[1, :]
     p0  = reshape(state_primitive_0[:, 4 ,:], (Nl * Nx, Nz))[1, :]
 
@@ -77,8 +77,8 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     ax1.set_xlabel("ρ")
 
 
-    ax2.plot(sqrt.(u0.^2 + w0.^2), zz, "-o", fillstyle = "none", label = "Ref")
-    ax2.plot(sqrt.(u.^2 + w.^2), zz, "-", fillstyle = "none", label = vertical_method)
+    ax2.plot(sqrt.(u0.^2 + w0.^2), alt, "-o", fillstyle = "none", label = "Ref")
+    ax2.plot(sqrt.(u.^2 + w.^2), alt, "-", fillstyle = "none", label = vertical_method)
     ax2.legend()
     ax2.set_xlabel("|v|")
 

@@ -7,7 +7,7 @@ import PyPlot
 
 function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz::Int64=32)
     
-    Np = 3
+    Np = 2
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
     topology_type = "AtmoLES"
@@ -50,21 +50,22 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     Q = solve!(solver)
 
 
-    zz = reshape(mesh.vol_l_geo[2,:,:], (Nl * Nx, Nz))[1, :]
+    nx_plot = div(Nl * Nx, 2)
+    zz = reshape(mesh.vol_l_geo[2,:,:], (Nl * Nx, Nz))[nx_plot, :]
     
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive)
-    ρ  = reshape(state_primitive[:, 1 ,:], (Nl * Nx, Nz))[1, :]
-    u  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
-    w  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
-    p  = reshape(state_primitive[:, 4 ,:], (Nl * Nx, Nz))[1, :]
+    ρ  = reshape(state_primitive[:, 1 ,:], (Nl * Nx, Nz))[nx_plot, :]
+    u  = reshape(state_primitive[:, 2 ,:], (Nl * Nx, Nz))[nx_plot, :]
+    w  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[nx_plot, :]
+    p  = reshape(state_primitive[:, 4 ,:], (Nl * Nx, Nz))[nx_plot, :]
 
     state_primitive_0 = solver.state_primitive
     prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
-    ρ0  = reshape(state_primitive_0[:, 1 ,:], (Nl * Nx, Nz))[1, :]
-    u0  = reshape(state_primitive_0[:, 3 ,:], (Nl * Nx, Nz))[1, :]
-    w0  = reshape(state_primitive_0[:, 3 ,:], (Nl * Nx, Nz))[1, :]
-    p0  = reshape(state_primitive_0[:, 4 ,:], (Nl * Nx, Nz))[1, :]
+    ρ0  = reshape(state_primitive_0[:, 1 ,:], (Nl * Nx, Nz))[nx_plot, :]
+    u0  = reshape(state_primitive_0[:, 2 ,:], (Nl * Nx, Nz))[nx_plot, :]
+    w0  = reshape(state_primitive_0[:, 3 ,:], (Nl * Nx, Nz))[nx_plot, :]
+    p0  = reshape(state_primitive_0[:, 4 ,:], (Nl * Nx, Nz))[nx_plot, :]
 
 
 
@@ -90,7 +91,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
 end
 
-t_end = 100.0# 86400.0 
+t_end = 10.0# 86400.0 
 Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
 # hydrostatic_balance("WENO3", t_end,  Nz)
