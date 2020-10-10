@@ -19,8 +19,8 @@ mutable struct Solver
     # diagnostic variables 
     state_diagnostic::Array{Float64,3}   # primitive variables
     
-
-
+    
+    
     # auxiliary variables 
     # size = （Nl, num_state, nelem) 
     state_auxiliary_vol_l::Array{Float64,3}    # auxiliary states at volume Gauss-Legendre-Lobatto points
@@ -43,7 +43,7 @@ mutable struct Solver
     cfl::Float64
     dt0::Float64
     t_end::Float64
-
+    
     vertical_method::String
     
 end
@@ -57,13 +57,13 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     
     state_prognostic = zeros(Float64, Nl, num_state_prognostic, nelem)
     Q1 = zeros(Float64, Nl, num_state_prognostic, nelem)
-
+    
     # reconstruction state variables
     state_primitive  = zeros(Float64, Nl, num_state_prognostic, nelem)
-
+    
     state_diagnostic = zeros(Float64, Nl, num_state_diagnostic, nelem)
     
-
+    
     state_auxiliary_vol_l = zeros(Float64, Nl, num_state_auxiliary, nelem)    # auxiliary states at volume Gauss-Legendre-Lobatto points
     state_auxiliary_vol_q = zeros(Float64, Nq, num_state_auxiliary, nelem)    # auxiliary states at volume Gauss-Legendre points
     nface = 2
@@ -72,8 +72,8 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     
     
     init_state_auxiliary!(app, mesh, 
-        state_auxiliary_vol_l, state_auxiliary_vol_q, 
-        state_auxiliary_surf_h, state_auxiliary_surf_v)
+    state_auxiliary_vol_l, state_auxiliary_vol_q, 
+    state_auxiliary_surf_h, state_auxiliary_surf_v)
     
     tendency = zeros(Float64, Nl, num_state_prognostic, nelem)
     k1 = zeros(Float64, Nl, num_state_prognostic, nelem)
@@ -86,10 +86,10 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     cfl = params["cfl"]
     dt0 = params["dt0"]
     t_end = params["t_end"]
-
+    
     vertical_method = params["vertical_method"]
     
-
+    
     Solver(app, mesh, 
     state_prognostic, Q1, 
     state_primitive, 
@@ -120,22 +120,22 @@ function solve!(solver::Solver)
     
     dt0, cfl, cfl_freqency = solver.dt0, solver.cfl, solver.cfl_freqency
     Q_aux = solver.state_auxiliary_vol_l
-
+    
     cfl_dt0 = compute_cfl_dt(solver.app, solver.mesh, Q, Q_aux, cfl)
-
+    
     dt = min(dt0, cfl_dt0)
-
+    
     @info "dt , dt0, cfl_dt0 = ", dt , dt0, cfl_dt0
-
+    
     ite = 0
-
+    
     while t < t_end
         # compute time step size
         ite += 1
         if cfl_freqency > 0 && ite%cfl_freqency == 0
             dt = compute_cfl_dt(solver.app, solver.mesh, Q, Q_aux, cfl)
         end
-
+        
         if dt + t > t_end
             dt = t_end - t
         end
@@ -143,10 +143,13 @@ function solve!(solver::Solver)
         # update solution in W for the next time step 
         time_advance!(solver, Q, dt)
         
+        # apply filter
+        apply_filter(Q)
+        
         t += dt
         
     end
-
+    
     @info "Finish simulation: total iterations: ", ite, " dt0, cfl_dt0, t_end = ", dt0, " ", cfl_dt0, " ", t_end
     
     return Q
@@ -184,22 +187,22 @@ function time_advance!(solver::Solver,  Q::Array{Float64,3}, dt::Float64)
         Q .+=  dQ .* dt
         
     elseif time_integrator == "RK4"
-
+        
         k1 .= 0
         spatial_residual!(solver, Q, k1)
         
         Q1 .= Q + k1 .* dt/2.0
         k2 .= 0
         spatial_residual!(solver, Q1, k2);
-
+        
         Q1 .= Q + k2 .* dt/2.0
         k3 .= 0
         spatial_residual!(solver, Q1, k3);
-
+        
         Q1 .= Q + k3 .* dt
         k4 .= 0
         spatial_residual!(solver, Q1, k4);
-
+        
         
         dQ .= 1.0 / 6.0 * (k1 + 2*k2 + 2*k3 + k4)
         Q .+=  dQ .* dt
@@ -222,36 +225,35 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     state_auxiliary_vol_q  =  solver.state_auxiliary_vol_q   
     state_auxiliary_surf_h =  solver.state_auxiliary_surf_h   
     state_auxiliary_surf_v =  solver.state_auxiliary_surf_v
-
+    
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
-    update_state_auxiliary!(app, mesh, state_primitive , state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
-
-  
-
-
+    # update_state_auxiliary!(app, mesh, state_primitive , state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
+    
+    
+    
+    
     horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
-    # @show "horizontal_volume_tendency! ", norm(dQ)
-
-
+    #@show "horizontal_volume_tendency! ", norm(dQ)
+    
+    
     
     horizontal_interface_tendency!(app, mesh, Q, state_auxiliary_surf_h, dQ)
-    # @show "horizontal_interface_tendency! ", norm(dQ)
-
-
-    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
-    # @show "vertical_interface_tendency! ", norm(dQ)
-
-
-   
-
-
-
-    source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
-    # @show "source_tendency! ", norm(dQ)
-
+    #@show "horizontal_interface_tendency! ", norm(dQ)
     
-
+    
+    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
+    #@show "vertical_interface_tendency! ", norm(dQ)
+    
+    
+    
+    source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
+    
+    # @info dQ[:, 3, :]
+    @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
+    
+    
+    error("stop")
     
     M_lumped = @view mesh.vol_l_geo[3, :, :]
     for s = 1:app.num_state_prognostic
@@ -260,6 +262,24 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
 end
 
 
+function apply_filter(Q::Array{Float64,3})
+
+    Nl, num_state_prognostic, nelem = size(Q)
+    
+    Np = Nl - 1
+    ξl, ωl = lglpoints(Np)
+    filter = CutoffFilter(ξl, Np)
+    
+    
+    filter_states = [2,3]
+    for e = 1:nelem
+        for s in filter_states
+            Q[:, s, e] .= filter.filter * Q[:, s, e] 
+        end
+    end
+    
+    
+end
 
 function compute_cfl_dt(app::Application, mesh::Mesh, Q::Array{Float64,3}, Q_aux::Array{Float64,3}, cfl::Float64)
     
@@ -275,8 +295,8 @@ function compute_cfl_dt(app::Application, mesh::Mesh, Q::Array{Float64,3}, Q_aux
         
         for il = 1:Nl
             u = compute_wave_speed(app, Q[il, :, e], Q_aux[il, :, e])
-
-    
+            
+            
             
             dt_h = min(dt_h, cfl * Δs_min[1, il, e]/u)
             

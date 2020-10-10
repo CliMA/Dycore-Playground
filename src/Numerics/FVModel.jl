@@ -281,6 +281,7 @@ function vertical_interface_tendency!(
                         # use the auxiliary state in  local_aux⁻
                         local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
                         
+                        # @info state_prognostic_face⁻[:, iz],  state_prognostic_face⁺[:, iz]
                         
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   

@@ -174,6 +174,9 @@ function flux_first_order(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe
     ρu[2]*u[1]     ρu[2]*u[2]+p-p_ref; 
     (ρe+p)*u[1]    (ρe+p)*u[2]]
 
+
+    # @info p, p_ref
+
     
     return flux
 end
@@ -303,6 +306,9 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
     g = app.g
     topology_type = mesh.topology_type
     ϕl_q = mesh.ϕl_q
+
+    # @info "topology_type", topology_type
+    # error("stop")
     
     if topology_type == "AtmoLES"
         
@@ -404,10 +410,55 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
             state_auxiliary_vol_q[:, p_aux_id, e] .= ϕl_q * state_auxiliary_vol_l[:, p_aux_id, e]
         end
     end
-    
-    
 end
 
+
+function init_state_auxiliary!(app::DryEuler, mesh::Mesh, profile::DecayingTemperatureProfile, state_primitive,
+    state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
+    state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
+
+    if !app.use_ref_state;  return;   end
+    # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
+    p_aux_id , ρ_aux_id = 4 , 5
+    Nx, Nz, Δzc = mesh.Nx, mesh.Nz, mesh.Δzc
+    ϕl_q = mesh.ϕl_q
+    g =  app.g
+    Nl, num_state_auxiliary, nelem = size(state_auxiliary_vol_l)
+    
+    for iz = 1:Nz
+        for ix = 1:Nx
+            e  = ix + (iz-1)*Nx
+            e⁻ = ix + (iz-2)*Nx
+            for il = 1:Nl
+                
+                # center points
+                alt = state_auxiliary_vol_l[il, 1, e]/g
+
+                Tv, p, ρ = profile(alt)
+                state_auxiliary_vol_l[il, p_aux_id, e], state_auxiliary_vol_l[il, ρ_aux_id, e] = p, ρ
+                # @show state_primitive[il, 1, e] - ρ , ρ 
+                # @show state_primitive[il, 4, e] - p , p
+                
+                if il == 1
+                    state_auxiliary_surf_h[1,  p_aux_id, 1, e], state_auxiliary_surf_h[1,  ρ_aux_id, 1, e] = p, ρ
+                elseif il == Nl
+                    state_auxiliary_surf_h[1,  p_aux_id, 2, e], state_auxiliary_surf_h[1,  ρ_aux_id, 2, e] = p, ρ
+                end
+
+                #top bottom points
+                for ind_f = 1:2
+                    alt = state_auxiliary_surf_v[il,  1, ind_f, e]/g
+                    Tv, p, ρ = profile(alt)
+                    state_auxiliary_surf_v[il,  p_aux_id, ind_f, e], state_auxiliary_surf_v[il,  ρ_aux_id, ind_f, e] = p, ρ                
+                end
+         
+            end
+            
+            state_auxiliary_vol_q[:, p_aux_id, e] .= ϕl_q * state_auxiliary_vol_l[:, p_aux_id, e]
+            state_auxiliary_vol_q[:, ρ_aux_id, e] .= ϕl_q * state_auxiliary_vol_l[:, ρ_aux_id, e]
+        end
+    end
+end
 
 
 #################################################################################################
@@ -444,6 +495,9 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
             ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
             
             state_prognostic[il, :, e] .= [ρ ; ρu ; ρe]
+
+            # @show ρ, u_init, p
+            # @show prog_to_prim(app, state_prognostic[il, :, e], state_auxiliary[il, :, e])
             
             # error("stop")
         end

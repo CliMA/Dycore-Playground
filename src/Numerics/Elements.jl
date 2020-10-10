@@ -130,8 +130,85 @@ function spectralderivative(rl::Array{Float64,1} , rq::Array{Float64,1}, wbl::Ar
     return Dl_q
 end
 
+abstract type AbstractSpectralFilter end
+
+struct ExponentialFilter <: AbstractSpectralFilter
+    "filter matrix"
+    filter
+    
+    function ExponentialFilter(
+        ξ::Array{Float64,1},
+        Nc::Int64,
+        s::Int64 = 32,
+        α::Float64 = -log(eps(Float64)),
+        )
+        
+        Np = length(ξ) - 1
+        
+        @assert iseven(s)
+        @assert 0 <= Nc <= N
+        
+        σ(η) = exp(-α * η^s)
+        filter = spectral_filter_matrix(ξ, Nc, σ)
+        
+        new(filter)
+    end
+end
 
 
+struct CutoffFilter <: AbstractSpectralFilter
+    "filter matrix"
+    filter
+    
+    function CutoffFilter(
+        ξ::Array{Float64,1}, 
+        Nc::Int64
+        )
+        
+        σ(η) = 0
+        filter = spectral_filter_matrix(ξ, Nc, σ)
+        
+        new(filter)
+    end
+end
+
+function spectral_filter_matrix(r, Nc, σ)
+    # N is the polynomial order
+    
+    N = length(r) - 1
+    
+    
+    
+    a, b = GaussQuadrature.legendre_coefs(Float64, N)
+    V = GaussQuadrature.orthonormal_poly(r, a, b)
+    
+    Σ = ones(Float64, N + 1)
+
+    if Nc == N
+        Σ[N + 1] = σ(1.0)
+    else
+        Σ[(Nc:N) .+ 1] .= σ.(((Nc:N) .- Nc) ./ (N - Nc))
+    end
+    
+    V * Diagonal(Σ) / V
+end
+
+function Filter_Test()
+    function func(ξ)
+        return ξ.^2 + ξ .+ 1.0
+    end
+
+    Np = 3
+    ξl, ωl = lglpoints(Np)
+    fl = func(ξl)
+
+    @show fl
+
+    filter = CutoffFilter(ξl, Np)
+    @info filter.filter * fl
+end
+
+# Filter_Test()
 
 
 function Elements_test()
