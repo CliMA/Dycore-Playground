@@ -12,6 +12,7 @@ state_primitive = Array(num_state_prognostic, Nz), Δz = Array(Nz)
 function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
     
     Δ = zeros(size(Δ⁻))
+
     
     num_state = length(Δ⁻)
     for s = 1:num_state

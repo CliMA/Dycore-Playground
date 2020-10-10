@@ -14,7 +14,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
     
     
-    Nx = 32
+    Nx = 2
     Lx, Lz = 16.0e3, 8.0e3
     
     
@@ -87,19 +87,29 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     w0  = reshape(state_primitive_0[:, 3 ,:], (Nl * Nx, Nz))
     p0  = reshape(state_primitive_0[:, 4 ,:], (Nl * Nx, Nz))
 
+    state_primitive_ref = copy(solver.state_primitive)
+    prog_to_prim!(app, state_prognostic_ref, solver.state_auxiliary_vol_l, state_primitive_ref)
+    ρ_ref  = reshape(state_primitive_ref[:, 1 ,:], (Nl * Nx, Nz))
+    u_ref  = reshape(state_primitive_ref[:, 2 ,:], (Nl * Nx, Nz))
+    w_ref  = reshape(state_primitive_ref[:, 3 ,:], (Nl * Nx, Nz))
+    p_ref  = reshape(state_primitive_ref[:, 4 ,:], (Nl * Nx, Nz))
+
 
     nx_plot = div(Nl * Nx, 2)
     zz = reshape(mesh.vol_l_geo[2,:,:], (Nl * Nx, Nz))[nx_plot, :]
     fig, (ax1, ax2, ax3) = PyPlot.subplots(ncols = 3, nrows=1, sharex=false, sharey=true, figsize=(12,6))
-    ax1.plot(ρ0[nx_plot, :], zz, "-o", fillstyle = "none", label = "Ref")
+    ax1.plot(ρ0[nx_plot, :], zz, "-o", fillstyle = "none", label = "Init")
+    ax1.plot(ρ_ref[nx_plot, :], zz, "-o", fillstyle = "none", label = "Ref")
     ax1.plot(ρ[nx_plot, :], zz, "-", fillstyle = "none", label = vertical_method)
     ax1.legend()
     ax1.set_xlabel("ρ")
-    ax2.plot(sqrt.(u0.^2 + w0.^2)[nx_plot, :], zz, "-o", fillstyle = "none", label = "Ref")
+    ax2.plot(sqrt.(u0.^2 + w0.^2)[nx_plot, :], zz, "-o", fillstyle = "none", label = "Init")
+    ax2.plot(sqrt.(u_ref.^2 + w_ref.^2)[nx_plot, :], zz, "-o", fillstyle = "none", label = "Ref")
     ax2.plot(sqrt.(u.^2 + w.^2)[nx_plot, :], zz, "-", fillstyle = "none", label = vertical_method)
     ax2.legend()
     ax2.set_xlabel("|v|")
-    ax3.plot(p0[nx_plot, :], zz, "-o", fillstyle = "none", label = "Ref")
+    ax3.plot(p0[nx_plot, :], zz, "-o", fillstyle = "none", label = "Init")
+    ax3.plot(p_ref[nx_plot, :], zz, "-o", fillstyle = "none", label = "Ref")
     ax3.plot(p[nx_plot, :], zz, "-", fillstyle = "none", label = vertical_method)
     ax3.legend()
     ax3.set_xlabel("p")
@@ -126,7 +136,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
 end
 
-t_end = 200.0# 86400.0 
+t_end = 100.0 
 Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
 # hydrostatic_balance("WENO3", t_end,  Nz)

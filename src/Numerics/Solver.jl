@@ -261,6 +261,13 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     for s = 1:app.num_state_prognostic
         dQ[:,s,:] ./= M_lumped
     end
+
+
+    # @info dQ[:, 3, :]
+    @info Q[1,3,1], Q[1,3,1]/Q[1,1,1]
+    @show dQ[1, 3, 1]
+    @show "final! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
+    
 end
 
 
