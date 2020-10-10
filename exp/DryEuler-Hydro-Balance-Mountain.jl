@@ -20,7 +20,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
     topology_size = [Lx; Lz]
     topology = topology_les(Nl, Nx, Nz, Lx, Lz)
-    mountain_wrap_les!(Nl, Nx, Nz, Lx, Lz, topology)
+    #mountain_wrap_les!(Nl, Nx, Nz, Lx, Lz, topology)
 
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
     gravity = true
@@ -41,11 +41,15 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
     state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
     
+    T_virt_surf, T_min_ref, H_t =  290.0, 220.0, 8.0e3
+    state_prognostic_ref = ones(Nl, num_state_prognostic, nelem)
+    profile_ref = init_hydrostatic_balance!(app,  mesh,  state_prognostic_ref, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
+
     T_virt_surf, T_min_ref, H_t = 280.0, 230.0, 9.0e3
-    profile = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
+    profile_0 = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     set_init_state!(solver, state_prognostic_0)
 
-
+    
 
     state_auxiliary_vol_l  =  solver.state_auxiliary_vol_l     
     state_auxiliary_vol_q  =  solver.state_auxiliary_vol_q   
@@ -55,7 +59,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
 
     state_primitive_0 = solver.state_primitive
     prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
-    init_state_auxiliary!(app, mesh, profile, state_primitive_0, state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
+    init_state_auxiliary!(app, mesh, profile_ref, state_primitive_0, state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
 
     visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_Mountain_init_"*vertical_method*".png")
 
@@ -122,7 +126,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
 end
 
-t_end = 1000.0# 86400.0 
+t_end = 200.0# 86400.0 
 Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
 # hydrostatic_balance("WENO3", t_end,  Nz)
