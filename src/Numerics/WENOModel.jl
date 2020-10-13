@@ -206,19 +206,43 @@ function reconstruction_1d_weno3(app::Application, state_primitive_col, Δzc_col
     state_primitive_face⁻::Array{Float64, 2}, state_primitive_face⁺::Array{Float64, 2})
     
     num_state_prognostic, Nz = size(state_primitive_col)
-    
+    g = app.g
+
+    @show state_primitive_col
     
     ##########################################################################################################
     # compute face states by looping cells
     num_left_stencil = 1
     state_primitive_weno, Δz_weno = zeros(num_state_prognostic, 2num_left_stencil+1), zeros(2num_left_stencil+1)
     for iz = 1:Nz
+        
+        ρ, p, Δz = state_primitive_col[1, iz],  state_primitive_col[4, iz],  Δzc_col[iz]
+        # bottom face⁺ and top face⁻
+        p_face⁺, p_face⁻ = p + ρ*Δz*g/2.0, p - ρ*Δz*g/2.0
+
         for is = 1: 2num_left_stencil+1
             state_primitive_weno[:, is] = state_primitive_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
             Δz_weno[is] =  Δzc_col[mod1(iz - num_left_stencil + is - 1, Nz)]
         end
+
+        # subtract the hydrostatic balance p_ref
+        state_primitive_weno[4, 1] -= p + g*(state_primitive_weno[1, 1]*Δz_weno[1] + ρ*Δz)/2.0
+        state_primitive_weno[4, 2] -= p
+        state_primitive_weno[4, 3] -= p - g*(state_primitive_weno[1, 3]*Δz_weno[3] + ρ*Δz)/2.0
+
         (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1])   = weno3_recon(Δz_weno, state_primitive_weno)
+
+        # add the hydrostatic balance p_ref
+        state_primitive_face⁺[4, iz]   += p_face⁺
+        state_primitive_face⁻[4, iz+1] += p_face⁻
+
+        
     end
+
+    # @info state_primitive_face⁻
+    #     @info state_primitive_face⁺
+    #     error("Stop")
+    
     
 end
 
@@ -230,29 +254,65 @@ function reconstruction_1d_weno5(app::Application, state_primitive_col, Δzc_col
     
     num_state_prognostic, Nz = size(state_primitive_col)
     
-    
+    g = app.g
     ##########################################################################################################
     # compute face states by looping cells
     num_left_stencil = 2
     state_primitive_weno, Δz_weno = zeros(num_state_prognostic, 2num_left_stencil+1), zeros(2num_left_stencil+1)
+    
     for iz = 1:Nz
+        ρ, p, Δz = state_primitive_col[1, iz],  state_primitive_col[4, iz],  Δzc_col[iz]
+        # bottom face⁺ and top face⁻
+        p_face⁺, p_face⁻ = p + ρ*Δz*g/2.0, p - ρ*Δz*g/2.0
+
         for is = 1: 2num_left_stencil+1
             state_primitive_weno[:, is] = state_primitive_col[:, mod1(iz - num_left_stencil + is - 1, Nz)]
             Δz_weno[is] =  Δzc_col[mod1(iz - num_left_stencil + is - 1, Nz)]
         end
+
+        # subtract the hydrostatic balance p_ref
+        state_primitive_weno[4, 1] -= p + g*(state_primitive_weno[1, 1]*Δz_weno[1]/2.0 + state_primitive_weno[1, 2]*Δz_weno[2] + ρ*Δz/2.0)
+        state_primitive_weno[4, 2] -= p + g*(state_primitive_weno[1, 2]*Δz_weno[2]/2.0 + ρ*Δz/2.0)
+        state_primitive_weno[4, 3] -= p 
+        state_primitive_weno[4, 4] -= p - g*(state_primitive_weno[1, 4]*Δz_weno[4]/2.0 + ρ*Δz/2.0)
+        state_primitive_weno[4, 5] -= p - g*(state_primitive_weno[1, 5]*Δz_weno[5]/2.0 + state_primitive_weno[1, 4]*Δz_weno[4] + ρ*Δz/2.0)
+
+
         (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1]) = weno5_recon(Δz_weno, state_primitive_weno)
+        # add the hydrostatic balance p_ref
+        state_primitive_face⁺[4, iz]   += p_face⁺
+        state_primitive_face⁻[4, iz+1] += p_face⁻
     end
 
+
+    if app.bc_bottom_type == "periodic" || app.bc_top_type == "periodic"; return; end;
 
     # reduce to weno3 on near the bc
     num_left_stencil = 1
     state_primitive_weno, Δz_weno = zeros(num_state_prognostic, 2num_left_stencil+1), zeros(2num_left_stencil+1)
     for iz = [2, Nz-1]
+
+        ρ, p, Δz = state_primitive_col[1, iz],  state_primitive_col[4, iz],  Δzc_col[iz]
+        # bottom face⁺ and top face⁻
+        p_face⁺, p_face⁻ = p + ρ*Δz*g/2.0, p - ρ*Δz*g/2.0
+
         for is = 1: 2num_left_stencil+1
             state_primitive_weno[:, is] = state_primitive_col[:, (iz - num_left_stencil + is - 1)]
             Δz_weno[is] =  Δzc_col[(iz - num_left_stencil + is - 1)]
         end
+
+
+        # subtract the hydrostatic balance p_ref
+        state_primitive_weno[4, 1] -= p + g*(state_primitive_weno[1, 1]*Δz_weno[1] + ρ*Δz)/2.0
+        state_primitive_weno[4, 2] -= p
+        state_primitive_weno[4, 3] -= p - g*(state_primitive_weno[1, 3]*Δz_weno[3] + ρ*Δz)/2.0
+
+
         (state_primitive_face⁺[:, iz], state_primitive_face⁻[:, iz+1]) = weno3_recon(Δz_weno, state_primitive_weno)
+
+        # add the hydrostatic balance p_ref
+        state_primitive_face⁺[4, iz]   += p_face⁺
+        state_primitive_face⁻[4, iz+1] += p_face⁻
     end
 
       

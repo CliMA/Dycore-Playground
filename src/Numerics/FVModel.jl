@@ -143,13 +143,16 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
             
             
             #constant reconstruction
-            
-            # one-side extrapolation
+    
             state_primitive_face⁺[:, 1] .= state_primitive0;
             state_primitive_face⁺[4, 1]  = state_primitive0[4] + g*state_primitive0[1]*Δz/2.0
             state_primitive_face⁺[:, 1] .= bc_impose(app, state_primitive_face⁺[:,1], bc_bottom_type, bc_bottom_n)
             
+            # one-side extrapolation vs central 
             state_primitive_face⁻[:, 2].= state_primitive0;
+            
+            # state_primitive_face⁻[:, 2].=  Δz⁺/(Δz + Δz⁺)*state_primitive0 + Δz/(Δz + Δz⁺)*state_primitive_col[:, 2];
+
             state_primitive_face⁻[4, 2] = state_primitive0[4] - g*state_primitive0[1]*Δz/2.0
             
             
@@ -172,7 +175,9 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
             state_primitive_face⁺[:, Nz] .= state_primitive0;
             state_primitive_face⁺[4, Nz]  = state_primitive0[4] + g*state_primitive0[1]*Δz/2.0
             
+            # one-side extrapolation vs central 
             state_primitive_face⁻[:, Nz+1] .= state_primitive0;
+            # state_primitive_face⁻[:, Nz+1] .= Δz⁻/(Δz + Δz⁻)*state_primitive0 + Δz/(Δz + Δz⁻)*state_primitive_col[:, Nz-1];
             state_primitive_face⁻[4, Nz+1]  = state_primitive0[4] - g*state_primitive0[1]*Δz/2.0
             
             
@@ -197,8 +202,11 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
             
             #constant reconstruction one-side extrapolation
             
+            #one-side extrapolation vs central 
             state_primitive_face⁺[:, Nz] .= state_primitive0;
+            # state_primitive_face⁺[:, Nz] .= Δz⁻/(Δz + Δz⁻)*state_primitive0 + Δz/(Δz + Δz⁻)*state_primitive_col[:, Nz-1];
             state_primitive_face⁺[4, Nz]  = state_primitive0[4] + g*state_primitive0[1]*Δz/2.0
+            
             
             state_primitive_face⁻[:, Nz+1] .= state_primitive0;
             state_primitive_face⁻[4, Nz+1]  = state_primitive0[4] - g*state_primitive0[1]*Δz/2.0
@@ -220,7 +228,6 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
     
     
     # @info state_primitive_face⁺
-    
     # @info state_primitive_face⁻
     # error("stop")
     
@@ -327,6 +334,8 @@ function vertical_interface_tendency!(
                     end
                     
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
+
+                    # @info iz, sM * local_flux
                     
                     
                     # top 
@@ -354,6 +363,9 @@ function vertical_interface_tendency!(
                     end
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
+
+
+                    # @info iz, sM * local_flux
                     
                     
                     
@@ -373,10 +385,20 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
+
+                    # if iz == 2
+                    #     @info state_primitive_face⁻[:,2], state_primitive_face⁺[:,2], local_aux⁻, local_aux⁺
+                    #     @show state_prognostic_face⁻[:, iz],  state_prognostic_face⁺[:, iz]
+                    #     @info iz, local_flux, sM * local_flux
+                    #     error("stop")
+                    # end
                     
                     
                 end
             end 
+
+            # @info tendency[il, :, ix:Nx:end]
+            # error("stop")
             
         end
     end
