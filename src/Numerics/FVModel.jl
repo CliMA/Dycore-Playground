@@ -12,7 +12,7 @@ state_primitive = Array(num_state_prognostic, Nz), Δz = Array(Nz)
 function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
     
     Δ = zeros(size(Δ⁻))
-
+ 
     
     num_state = length(Δ⁻)
     for s = 1:num_state
@@ -63,25 +63,25 @@ function reconstruction_1d_fv(app::Application, state_primitive_col, Δzc_col,
         #face:          iz      iz+1
         #cell: |  iz-1   |   iz   |  iz+1  |
         Δz⁻, Δz, Δz⁺ = Δzc_col[mod1(iz-1,Nz)], Δzc_col[iz], Δzc_col[mod1(iz+1,Nz)]
-
+        
         state_primitive0  .= state_primitive_col[:, iz]
-
+        
         state_primitive0⁻ .= state_primitive0 ; 
         state_primitive0⁻[4] = state_primitive0[4] + g*(state_primitive0[1]*Δz + state_primitive0⁻[1]*Δz⁻)/2.0
         state_primitive_face⁺[:, iz] .= state_primitive0
         state_primitive_face⁺[4, iz]  = state_primitive0[4] + g*(state_primitive0[1]*Δz)/2.0
-
+        
         state_primitive0⁺ .= state_primitive0 ; 
         state_primitive0⁺[4] = state_primitive0[4] - g*(state_primitive0[1]*Δz + state_primitive0⁺[1]*Δz⁺)/2.0
         state_primitive_face⁻[:, iz+1] .= state_primitive0
         state_primitive_face⁻[4, iz+1]  = state_primitive0[4] - g*(state_primitive0[1]*Δz)/2.0
-
+        
         Δstate⁺ = (state_primitive_col[:, mod1(iz+1,Nz)] - state_primitive0⁺)
         Δstate⁻ =                                                             - (state_primitive_col[:, mod1(iz-1,Nz)] - state_primitive0⁻)
         
         
         ∂state = 2.0*limiter(Δstate⁺/(Δz⁺ + Δz), Δstate⁻/(Δz⁻ + Δz))
-
+        
         
         state_primitive_face⁺[:, iz]   .-=  ∂state * Δz/2.0
         state_primitive_face⁻[:, iz+1] .+=  ∂state * Δz/2.0
@@ -98,7 +98,7 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
     state_primitive_face⁻::Array{Float64, 2}, state_primitive_face⁺::Array{Float64, 2})
     
     Nz = length(Δzc_col)
-
+    
     # if app.use_ref_state
     #     # reconstruct p - pref
     #     p_aux_id = 4
@@ -132,49 +132,50 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
         g = app.g
         # update other type of boundary conditions
         if bc_bottom_type == "no-slip" || bc_bottom_type == "no-penetration"
-
+            
             Δz, Δz⁺ = Δzc_col[1], Δzc_col[2]
-
-
+            
+            
             state_primitive0  = state_primitive_col[:, 1]
-
+            
             # state_primitive0⁺ .= state_primitive_col[:, 2] ; 
             # state_primitive0⁺[4] = state_primitive0[4] - g*(state_primitive0[1]*Δz + state_primitive0⁺[1]*Δz⁺)/2.0
-
+            
             
             #constant reconstruction
-
+            
             # one-side extrapolation
             state_primitive_face⁺[:, 1] .= state_primitive0;
             state_primitive_face⁺[4, 1]  = state_primitive0[4] + g*state_primitive0[1]*Δz/2.0
-
+            state_primitive_face⁺[:, 1] .= bc_impose(app, state_primitive_face⁺[:,1], bc_bottom_type, bc_bottom_n)
+            
             state_primitive_face⁻[:, 2].= state_primitive0;
             state_primitive_face⁻[4, 2] = state_primitive0[4] - g*state_primitive0[1]*Δz/2.0
-
+            
             
         else
             error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
         end
         
         
-
+        
         # populate top ghost state
         if bc_top_type == "outlet"
             
-
+            
             Δz, Δz⁻ = Δzc_col[Nz], Δzc_col[Nz - 1]
-
+            
             state_primitive0  = state_primitive_col[:, Nz]
-
+            
             #constant reconstruction one-side extrapolation
-
+            
             state_primitive_face⁺[:, Nz] .= state_primitive0;
             state_primitive_face⁺[4, Nz]  = state_primitive0[4] + g*state_primitive0[1]*Δz/2.0
-
+            
             state_primitive_face⁻[:, Nz+1] .= state_primitive0;
             state_primitive_face⁻[4, Nz+1]  = state_primitive0[4] - g*state_primitive0[1]*Δz/2.0
-
-
+            
+            
             
             # outlet state
             state_primitive_face⁺[:, Nz + 1] = bc_top_data
@@ -188,6 +189,22 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
             # # one-side extrapolation
             # state_primitive_face⁻[:, Nz + 1] = state_primitive_col[:, Nz] + ∂state * Δz1/2.0
             # state_primitive_face⁺[:, Nz] = state_primitive_col[:, Nz] - ∂state * Δz1/2.0
+        elseif bc_top_type == "no-slip" || bc_top_type == "no-penetration"
+            
+            Δz, Δz⁻ = Δzc_col[Nz], Δzc_col[Nz - 1]
+            
+            state_primitive0  = state_primitive_col[:, Nz]
+            
+            #constant reconstruction one-side extrapolation
+            
+            state_primitive_face⁺[:, Nz] .= state_primitive0;
+            state_primitive_face⁺[4, Nz]  = state_primitive0[4] + g*state_primitive0[1]*Δz/2.0
+            
+            state_primitive_face⁻[:, Nz+1] .= state_primitive0;
+            state_primitive_face⁻[4, Nz+1]  = state_primitive0[4] - g*state_primitive0[1]*Δz/2.0
+            state_primitive_face⁻[:, Nz+1] = bc_impose(app, state_primitive_face⁻[:, Nz+1], bc_top_type, bc_top_n)
+            
+            
         else
             error("bc_top_type = ", bc_top_type, " has not implemented")   
         end 
@@ -201,12 +218,12 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
     #     state_primitive_face⁺[4, :] .+= p_ref_sur_col
     # end
     
-
+    
     # @info state_primitive_face⁺
-
+    
     # @info state_primitive_face⁻
     # error("stop")
-
+    
 end
 
 
@@ -289,7 +306,7 @@ function vertical_interface_tendency!(
             
             # loop face 
             for iz = 1:Nz+1
-            
+                
                 # face iz ;  bottom cell iz-1 ; top cell is iz
                 # bottom 
                 if iz == 1
@@ -314,7 +331,7 @@ function vertical_interface_tendency!(
                     
                     # top 
                 elseif iz == Nz+1
-                    e⁻ =  ix + (iz-2)*Nx  
+                    e⁻ =  ix + (Nz-1)*Nx  
                     local_aux⁻ = state_auxiliary_surf_v[il, :,  end, e⁻] 
                     (n1, n2, sM) = sgeo_v[:, il, end, e⁻] 
                     if bc_top_type == "periodic"
@@ -327,6 +344,10 @@ function vertical_interface_tendency!(
                         local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
                         
                         # @info state_prognostic_face⁻[:, iz],  state_prognostic_face⁺[:, iz]
+                        
+                    elseif bc_bottom_type == "no-slip" || bc_bottom_type == "no-penetration"
+                        
+                        local_flux = wall_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, [n1;n2]) 
                         
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " has not implemented")   
@@ -344,10 +365,10 @@ function vertical_interface_tendency!(
                     local_aux⁺ = state_auxiliary_surf_v[il, :,  1, e⁺] 
                     
                     (n1, n2, sM) = sgeo_v[:, il, end, e⁻]    
-
+                    
                     
                     local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
-
+                    
                     
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux

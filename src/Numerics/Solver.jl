@@ -124,6 +124,7 @@ function solve!(solver::Solver)
     cfl_dt0 = compute_cfl_dt(solver.app, solver.mesh, Q, Q_aux, cfl)
     
     dt = min(dt0, cfl_dt0)
+    update_sponge_params!(app, dt)
     
     @info "dt , dt0, cfl_dt0 = ", dt , dt0, cfl_dt0
     
@@ -134,10 +135,12 @@ function solve!(solver::Solver)
         ite += 1
         if cfl_freqency > 0 && ite%cfl_freqency == 0
             dt = compute_cfl_dt(solver.app, solver.mesh, Q, Q_aux, cfl)
+            update_sponge_params!(app, dt)
         end
         
         if dt + t > t_end
             dt = t_end - t
+            update_sponge_params!(app, dt)
         end
         
         # update solution in W for the next time step 
@@ -230,6 +233,7 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
     # update_state_auxiliary!(app, mesh, state_primitive , state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
     
+    compute_min_max(app, state_primitive)
     
     
     

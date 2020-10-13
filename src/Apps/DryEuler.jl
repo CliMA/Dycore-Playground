@@ -25,6 +25,12 @@ mutable struct DryEuler <: Application
     γ::Float64
     Rd::Float64
     MSLP::Float64
+
+
+    Δt::Float64
+    zT::Float64
+    zD::Float64
+
 end
 
 function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1}, Nothing},
@@ -50,6 +56,9 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     γ = 1.4
     Rd = 287.058
     MSLP = 1.01325e5
+
+    Δt, zT, zD = -1.0, -1.0, -1.0
+    
     
     DryEuler(num_state_prognostic, num_state_diagnostic, num_state_auxiliary,
     bc_bottom_type, bc_bottom_data,
@@ -57,9 +66,24 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     bc_left_type, bc_left_data,
     bc_right_type, bc_right_data,
     use_ref_state,
-    g, γ, Rd, MSLP)
+    g, γ, Rd, MSLP,
+    Δt, zT, zD)
 end
 
+function update_sponge_params!(app::DryEuler, Δt::Float64=app.Δt, zT::Float64=app.zT, zD::Float64=app.zD)
+    app.Δt, app.zT, app.zD = Δt, zT, zD
+end
+
+
+
+function compute_min_max(app::DryEuler, state_primitive::Array{Float64,3})
+
+    @info "min ρ = ", minimum(state_primitive[:,1,:]), " max ρ = ", maximum(state_primitive[:,1,:])
+    @info "min u = ", minimum(state_primitive[:,2,:]), " max u = ", maximum(state_primitive[:,2,:])
+    @info "min w = ", minimum(state_primitive[:,3,:]), " max w = ", maximum(state_primitive[:,3,:])
+    @info "min p = ", minimum(state_primitive[:,4,:]), " max p = ", maximum(state_primitive[:,4,:])
+
+end
 
 function internal_energy(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, Φ::Float64)
     ρinv = 1 / ρ
@@ -299,15 +323,19 @@ function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxili
 
     # test
     ρ_ref = 0.0
+    source = [0.0; -(ρ - ρ_ref)*∇Φ ; 0.0]
 
     # sponge layer
-    # u = state_prognostic[2:3]/state_prognostic[1]
-    # α = 1.0/(20Δt)
-    # β = (z <= zD ? 0 : α*sin(π/2.0 * ((z - zD)/(zT - zD)))^2)
+    g = app.g
+    z = state_auxiliary[1]/g
+    Δt, zT, zD = app.Δt, app.zT, app.zD
+    ρu = state_prognostic[2:3]
+    α = 1.0/(20Δt)
+    β = (z <= zD ? 0 : α*sin(π/2.0 * ((z - zD)/(zT - zD)))^2)
 
-
+    source[2:3] .-= β*ρu
     
-    return [0.0; -(ρ - ρ_ref)*∇Φ; 0.0]
+    return source
 end
 
 
