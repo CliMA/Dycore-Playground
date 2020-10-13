@@ -71,6 +71,7 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     state_auxiliary_surf_v = zeros(Float64, Nl, num_state_auxiliary, nface, nelem)   # auxiliary states at vertical flux surface
     
     
+    
     init_state_auxiliary!(app, mesh, 
     state_auxiliary_vol_l, state_auxiliary_vol_q, 
     state_auxiliary_surf_h, state_auxiliary_surf_v)
@@ -231,13 +232,14 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
-    # update_state_auxiliary!(app, mesh, state_primitive , state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
+    update_state_auxiliary!(app, mesh, state_primitive , state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
     
     compute_min_max(app, state_primitive)
     
     
     
-    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_l, state_auxiliary_vol_q, dQ)
+    #horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_l, state_auxiliary_vol_q, dQ)
+    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
     #@show "horizontal_volume_tendency! ", norm(dQ)
     
     # @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])

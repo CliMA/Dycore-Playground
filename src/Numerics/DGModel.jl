@@ -259,15 +259,94 @@ function source_tendency!(
                 x, z, M = vol_l_geo[:, il, e]
 
     
-                tendency[il, :, e] += source(app, local_states_l[il, :], local_aux_l[il, :]) * M
-
-
-                
+                tendency[il, :, e] += source(app, local_states_l[il, :], local_aux_l[il, :]) * M 
             end
-            
-            
         end
         
     end
 end
+
+
+
+
+
+# #ghost cell, reconstruction for primitive or conservative variables
+# function geopotential_source_tendency!(
+#     app::Application,
+#     mesh::Mesh,
+#     state_prognostic::Array{Float64, 3},
+#     state_auxiliary_vol_l::Array{Float64,3},
+#     state_auxiliary_vol_q::Array{Float64,3},    # auxiliary states at volume Gauss-Legendre points
+#     state_auxiliary_surf_h::Array{Float64,4},   # auxiliary states at horizontal flux surface
+#     state_auxiliary_surf_v::Array{Float64,4}, 
+#     tendency::Array{Float64, 3})
+    
+    
+
+#     # Each element has Nl Gauss-Legendre-Lobatto points(basis), 
+#     # and Nq quadrature points
+    
+#     Nq , Nl, Nx, Nz = mesh.Nq, mesh.Nl, mesh.Nx, mesh.Nz
+#     num_state_prognostic = app.num_state_prognostic
+#     dim, vol_q_geo, ϕl_q, Dl_q = mesh.dim, mesh.vol_q_geo, mesh.ϕl_q, mesh.Dl_q
+    
+    
+#     # reconstructed local state at quadrature points
+#     local_states_q = zeros(Float64, Nq, num_state_prognostic)
+#     local_fluxes_q = zeros(Float64, Nq, num_state_prognostic, dim)
+    
+#     local_flux = zeros(Float64, num_state_prognostic)
+#     ∇ϕ = zeros(Float64, Nl, dim)
+#     for iz = 1:Nz
+#         for ix = 1:Nx
+#             e = ix + (iz-1)*Nx
+            
+#             local_states_l = @view state_prognostic[:, :, e]
+#             local_aux_q    = @view state_auxiliary_vol_q[:, :, e]
+            
+#             for s = 1:num_state_prognostic
+#                 local_states_q[:, s] =  ϕl_q * local_states_l[:, s]
+#             end
+            
+#             for iq = 1:Nq
+#                 local_fluxes_q[iq, :, :] = flux_first_order(app, local_states_q[iq, :], local_aux_q[iq, :])
+#             end
+            
+#             # Loop Legendre-Gauss-Lobatto points to construct ∇ϕ_j = ∇_ξϕ_j J⁻¹
+#             for iq = 1:Nq
+#                 M, ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z = vol_q_geo[:, iq, e]
+#                 for il = 1:Nl
+                    
+#                     tendency[il, :, e] .+= local_fluxes_q[iq, :, :] *( M * Dl_q[iq, il] * [∂ξ∂x ; ∂ξ∂z])
+#                 end
+#             end
+            
+#         end
+        
+#     end
+
+
+
+
+
+    
+#     vol_l_geo = mesh.vol_l_geo
+#     Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
+#     for iz = 1:Nz
+#         for ix = 1:Nx
+#             e = ix + (iz-1)*Nx
+            
+#             local_states_l = @view state_prognostic[:, :, e]
+#             local_aux_l = @view state_auxiliary_vol_l[:, :, e]
+            
+#             for il = 1:Nl
+#                 x, z, M = vol_l_geo[:, il, e]
+
+    
+#                 tendency[il, :, e] += source(app, local_states_l[il, :], local_aux_l[il, :]) * M 
+#             end
+#         end
+        
+#     end
+# end
 

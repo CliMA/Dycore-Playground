@@ -190,7 +190,7 @@ end
 function flux_first_order(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, p::Float64, p_ref::Float64)
     
     # test
-    p_ref = 0.0
+    # p_ref = 0.0
 
     u = ρu/ρ
     flux = 
@@ -308,7 +308,7 @@ function wall_flux_first_order(app::DryEuler,
     p_ref = state_auxiliary[4]
 
     # test
-    p_ref = 0.0
+    # p_ref = 0.0
 
     return [0.0, (p - p_ref) * n[1] , (p - p_ref) * n[2], 0.0]
 end
@@ -322,8 +322,10 @@ function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxili
     ∇Φ = state_auxiliary[2:3]
 
     # test
-    ρ_ref = 0.0
+    # ρ_ref = 0.0
     source = [0.0; -(ρ - ρ_ref)*∇Φ ; 0.0]
+
+    # @info ρ - ρ_ref
 
     # sponge layer
     g = app.g
@@ -408,6 +410,56 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
 end
 
 
+# function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Array{Float64, 3},
+#     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
+#     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
+
+#     if !app.use_ref_state;  return;   end
+#     # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
+#     p_aux_id , ρ_aux_id = 4 , 5
+#     Nx, Nz, Δzc = mesh.Nx, mesh.Nz, mesh.Δzc
+#     ϕl_q = mesh.ϕl_q
+#     g =  app.g
+#     Nl, num_state_auxiliary, nelem = size(state_auxiliary_vol_l)
+    
+#     state_auxiliary_vol_l[:, ρ_aux_id, :] .= state_primitive[:, 1, :]
+    
+#     for iz = 1:Nz
+#         for ix = 1:Nx
+#             e  = ix + (iz-1)*Nx
+#             e⁻ = ix + (iz-2)*Nx
+#             for il = 1:Nl
+                
+                
+#                 Δz = Δzc[il, ix, iz]
+#                 ρ, p = state_primitive[il, 1, e], state_primitive[il, 4, e]
+                
+#                 if e⁻ > 0
+#                     state_auxiliary_surf_v[il,  p_aux_id, 1, e] = state_auxiliary_surf_v[il,  p_aux_id, 2, e⁻]
+#                 else # on the ground
+#                     state_auxiliary_surf_v[il,  p_aux_id, 1, e] = p + ρ*g*Δz/2.0
+#                 end
+                
+#                 state_auxiliary_surf_v[il,  p_aux_id, 2, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz
+#                 state_auxiliary_vol_l[il, p_aux_id, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz/2.0
+                
+#                 if il == 1
+#                     state_auxiliary_surf_h[1,  p_aux_id, 1, e] = state_auxiliary_vol_l[il, p_aux_id, e]
+#                 elseif il == Nl
+#                     state_auxiliary_surf_h[1,  p_aux_id, 2, e] = state_auxiliary_vol_l[il, p_aux_id, e]
+#                 end
+                
+                
+#             end
+            
+#             state_auxiliary_vol_q[:, p_aux_id, e] .= ϕl_q * state_auxiliary_vol_l[:, p_aux_id, e]
+#         end
+#     end
+# end
+
+
+
+
 function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Array{Float64, 3},
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
@@ -421,30 +473,24 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
     Nl, num_state_auxiliary, nelem = size(state_auxiliary_vol_l)
     
     state_auxiliary_vol_l[:, ρ_aux_id, :] .= state_primitive[:, 1, :]
+    state_auxiliary_vol_l[:, p_aux_id, :] .= state_primitive[:, 4, :]
     
     for iz = 1:Nz
         for ix = 1:Nx
             e  = ix + (iz-1)*Nx
-            e⁻ = ix + (iz-2)*Nx
             for il = 1:Nl
-                
                 
                 Δz = Δzc[il, ix, iz]
                 ρ, p = state_primitive[il, 1, e], state_primitive[il, 4, e]
                 
-                if e⁻ > 0
-                    state_auxiliary_surf_v[il,  p_aux_id, 1, e] = state_auxiliary_surf_v[il,  p_aux_id, 2, e⁻]
-                else # on the ground
-                    state_auxiliary_surf_v[il,  p_aux_id, 1, e] = p + ρ*g*Δz/2.0
-                end
-                
-                state_auxiliary_surf_v[il,  p_aux_id, 2, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz
-                state_auxiliary_vol_l[il, p_aux_id, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz/2.0
+
+                state_auxiliary_surf_v[il,  p_aux_id, 1, e] = p + ρ*g*Δz/2.0
+                state_auxiliary_surf_v[il,  p_aux_id, 2, e] = p - ρ*g*Δz/2.0
                 
                 if il == 1
-                    state_auxiliary_surf_h[1,  p_aux_id, 1, e] = state_auxiliary_vol_l[il, p_aux_id, e]
+                    state_auxiliary_surf_h[1,  p_aux_id, 1, e] = p
                 elseif il == Nl
-                    state_auxiliary_surf_h[1,  p_aux_id, 2, e] = state_auxiliary_vol_l[il, p_aux_id, e]
+                    state_auxiliary_surf_h[1,  p_aux_id, 2, e] = p
                 end
                 
                 
@@ -454,7 +500,6 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
         end
     end
 end
-
 
 function init_state_auxiliary!(app::DryEuler, mesh::Mesh, profile::DecayingTemperatureProfile, state_primitive,
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
