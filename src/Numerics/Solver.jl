@@ -242,18 +242,18 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
     #@show "horizontal_volume_tendency! ", norm(dQ)
     
-    # @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
+    @show "horizontal_volume_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
     
     horizontal_interface_tendency!(app, mesh, Q, state_auxiliary_surf_h, dQ)
     #@show "horizontal_interface_tendency! ", norm(dQ)
     
-    # @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
+    @show "horizontal_interface_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
 
 
     vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
     #@show "vertical_interface_tendency! ", norm(dQ)
     
-    # @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
+    @show "vertical_interface_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
     
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
     

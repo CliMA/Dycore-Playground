@@ -307,6 +307,7 @@ function wall_flux_first_order(app::DryEuler,
     
     p_ref = state_auxiliary[4]
 
+   
     # test
     # p_ref = 0.0
 
@@ -321,11 +322,11 @@ function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxili
 
     ∇Φ = state_auxiliary[2:3]
 
+    
     # test
     # ρ_ref = 0.0
     source = [0.0; -(ρ - ρ_ref)*∇Φ ; 0.0]
 
-    # @info ρ - ρ_ref
 
     # sponge layer
     g = app.g
@@ -474,6 +475,11 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
     
     state_auxiliary_vol_l[:, ρ_aux_id, :] .= state_primitive[:, 1, :]
     state_auxiliary_vol_l[:, p_aux_id, :] .= state_primitive[:, 4, :]
+
+    # state_auxiliary_vol_l[:, ρ_aux_id, :] .= 0.0
+    # for e = 1:nelem
+    #     state_auxiliary_vol_l[:, p_aux_id, e] .= sum(state_primitive[:,4, e])/Nl
+    # end
     
     for iz = 1:Nz
         for ix = 1:Nx
@@ -481,7 +487,9 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
             for il = 1:Nl
                 
                 Δz = Δzc[il, ix, iz]
-                ρ, p = state_primitive[il, 1, e], state_primitive[il, 4, e]
+                # ρ, p = state_primitive[il, 1, e], state_primitive[il, 4, e]
+
+                ρ, p = state_auxiliary_vol_l[il, ρ_aux_id, e], state_auxiliary_vol_l[il, p_aux_id, e]
                 
 
                 state_auxiliary_surf_v[il,  p_aux_id, 1, e] = p + ρ*g*Δz/2.0
