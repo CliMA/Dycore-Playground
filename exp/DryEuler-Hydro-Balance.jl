@@ -43,7 +43,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     profile = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     set_init_state!(solver, state_prognostic_0)
 
-    visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_init_"*vertical_method*".png")
+    # visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_init_"*vertical_method*".png")
 
     Q = solve!(solver)
 
@@ -91,5 +91,5 @@ end
 t_end = 86400.0 
 Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
-hydrostatic_balance("WENO3", t_end,  Nz)
-hydrostatic_balance("WENO5", t_end,  Nz)
+#hydrostatic_balance("WENO3", t_end,  Nz)
+#hydrostatic_balance("WENO5", t_end,  Nz)

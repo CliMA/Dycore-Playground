@@ -165,8 +165,9 @@ end
 
 function flux_first_order(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, p::Float64, p_ref::Float64)
     
-    
-    
+    # test
+    p_ref = 0.0
+
     u = ρu/ρ
     flux = 
     [ρu[1] ρu[2];
@@ -282,6 +283,9 @@ function wall_flux_first_order(app::DryEuler,
     
     p_ref = state_auxiliary[4]
 
+    # test
+    p_ref = 0.0
+
     return [0.0, (p - p_ref) * n[1] , (p - p_ref) * n[2], 0.0]
 end
 
@@ -292,6 +296,10 @@ function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxili
 
 
     ∇Φ = state_auxiliary[2:3]
+
+    # test
+    ρ_ref = 0.0
+    
     return [0.0; -(ρ - ρ_ref)*∇Φ; 0.0]
 end
 

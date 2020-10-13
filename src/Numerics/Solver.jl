@@ -252,7 +252,7 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
     
     # @info dQ[:, 3, :]
-    # @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
+    @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
     
     
     # error("stop")
@@ -264,9 +264,11 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
 
 
     # @info dQ[:, 3, :]
-    @info Q[1,3,1], Q[1,3,1]/Q[1,1,1]
-    @show dQ[1, 3, 1]
-    @show "final! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
+    # @info dQ[1, 3, :]
+
+    # @show "final! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
+
+    # error("stop")
     
 end
 
