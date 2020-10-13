@@ -299,6 +299,13 @@ function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxili
 
     # test
     ρ_ref = 0.0
+
+    # sponge layer
+    # u = state_prognostic[2:3]/state_prognostic[1]
+    # α = 1.0/(20Δt)
+    # β = (z <= zD ? 0 : α*sin(π/2.0 * ((z - zD)/(zT - zD)))^2)
+
+
     
     return [0.0; -(ρ - ρ_ref)*∇Φ; 0.0]
 end
