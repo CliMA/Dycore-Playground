@@ -37,13 +37,26 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
     
     # set initial condition 
-    num_state_prognostic, nelem = app.num_state_prognostic, Nx*Nz
-    
+    num_state_prognostic, nelem = app.num_state_prognostic, Nx*Nz 
     state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
-    
     T_virt_surf, T_min_ref, H_t = 280.0, 230.0, 9.0e3
     profile = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     set_init_state!(solver, state_prognostic_0)
+
+
+
+    # update reference state
+    # T_virt_surf, T_min_ref, H_t =  290.0, 220.0, 8.0e3
+    # state_prognostic_ref = ones(Nl, num_state_prognostic, nelem)
+    # profile_ref = init_hydrostatic_balance!(app,  mesh,  state_prognostic_ref, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
+    # state_auxiliary_vol_l  =  solver.state_auxiliary_vol_l     
+    # state_auxiliary_vol_q  =  solver.state_auxiliary_vol_q   
+    # state_auxiliary_surf_h =  solver.state_auxiliary_surf_h   
+    # state_auxiliary_surf_v =  solver.state_auxiliary_surf_v
+    # state_primitive_ref = similar(state_prognostic_ref)
+    # prog_to_prim!(app, state_prognostic_ref, solver.state_auxiliary_vol_l, state_primitive_ref)
+    # update_state_auxiliary!(app, mesh, state_primitive_ref, state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
+
 
 
     visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_GCM_init_"*vertical_method*".png")
@@ -52,43 +65,62 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     Q = solve!(solver)
 
 
+
+
+
     xx, zz = reshape(mesh.vol_l_geo[1,:,:], (Nl * Nx, Nz))[1, :], reshape(mesh.vol_l_geo[2,:,:], (Nl * Nx, Nz))[1, :]
     alt = sqrt.(xx.^2 + zz.^2) .- r
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive)
-    ρ  = reshape(state_primitive[:, 1 ,:], (Nl * Nx, Nz))[1, :]
-    u  = reshape(state_primitive[:, 2 ,:], (Nl * Nx, Nz))[1, :]
-    w  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))[1, :]
-    p  = reshape(state_primitive[:, 4 ,:], (Nl * Nx, Nz))[1, :]
+    ρ  = reshape(state_primitive[:, 1 ,:], (Nl * Nx, Nz)) 
+    u  = reshape(state_primitive[:, 2 ,:], (Nl * Nx, Nz)) 
+    w  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz)) 
+    p  = reshape(state_primitive[:, 4 ,:], (Nl * Nx, Nz)) 
 
     state_primitive_0 = solver.state_primitive
     prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
-    ρ0  = reshape(state_primitive_0[:, 1 ,:], (Nl * Nx, Nz))[1, :]
-    u0  = reshape(state_primitive_0[:, 2 ,:], (Nl * Nx, Nz))[1, :]
-    w0  = reshape(state_primitive_0[:, 3 ,:], (Nl * Nx, Nz))[1, :]
-    p0  = reshape(state_primitive_0[:, 4 ,:], (Nl * Nx, Nz))[1, :]
+    ρ0  = reshape(state_primitive_0[:, 1 ,:], (Nl * Nx, Nz)) 
+    u0  = reshape(state_primitive_0[:, 2 ,:], (Nl * Nx, Nz)) 
+    w0  = reshape(state_primitive_0[:, 3 ,:], (Nl * Nx, Nz)) 
+    p0  = reshape(state_primitive_0[:, 4 ,:], (Nl * Nx, Nz))
 
 
 
     fig, (ax1, ax2, ax3) = PyPlot.subplots(ncols = 3, nrows=1, sharex=false, sharey=true, figsize=(12,6))
-
-    ax1.plot(ρ0, alt, "-o", fillstyle = "none", label = "Ref")
-    ax1.plot(ρ, alt, "-", fillstyle = "none", label = vertical_method)
+    ax1.plot(ρ0[1, :], alt, "-o", fillstyle = "none", label = "Ref")
+    ax1.plot(ρ[1, :], alt, "-", fillstyle = "none", label = vertical_method)
     ax1.legend()
     ax1.set_xlabel("ρ")
-
-
-    ax2.plot(sqrt.(u0.^2 + w0.^2), alt, "-o", fillstyle = "none", label = "Ref")
-    ax2.plot(sqrt.(u.^2 + w.^2), alt, "-", fillstyle = "none", label = vertical_method)
+    ax2.plot(sqrt.(u0[1, :].^2 + w0[1, :].^2), alt, "-o", fillstyle = "none", label = "Ref")
+    ax2.plot(sqrt.(u[1, :].^2 + w[1, :].^2), alt, "-", fillstyle = "none", label = vertical_method)
     ax2.legend()
     ax2.set_xlabel("|v|")
-
-    ax3.plot(p0, alt, "-o", fillstyle = "none", label = "Ref")
-    ax3.plot(p, alt, "-", fillstyle = "none", label = vertical_method)
+    ax3.plot(p0[1, :], alt, "-o", fillstyle = "none", label = "Ref")
+    ax3.plot(p[1, :], alt, "-", fillstyle = "none", label = vertical_method)
     ax3.legend()
     ax3.set_xlabel("p")
-
     fig.savefig("Hydrostatic_Balance_GCM"*vertical_method*".png")
+
+
+
+    nz_plot = div(Nz, 2)
+    xx = reshape(mesh.vol_l_geo[1,:,:], (Nl * Nx, Nz))[:, nz_plot]
+    fig, (ax1, ax2, ax3) = PyPlot.subplots(ncols = 3, nrows=1, sharex=false, sharey=false, figsize=(12,6))
+    ax1.plot(xx, ρ0[:, nz_plot], "-o", fillstyle = "none", label = "Init")
+    ax1.plot(xx, ρ[:, nz_plot], "-", fillstyle = "none", label = vertical_method)
+    ax1.legend()
+    ax1.set_ylabel("ρ")
+    #ax2.plot(xx, sqrt.(u0.^2 + w0.^2)[:, nz_plot], "-o", fillstyle = "none", label = "Init")
+    #ax2.plot(xx, sqrt.(u.^2 + w.^2)[:, nz_plot],  "-", fillstyle = "none", label = vertical_method)
+    ax2.plot(xx, sqrt.(u0.^2 )[:, nz_plot], "-o", fillstyle = "none", label = "Init")
+    ax2.plot(xx, sqrt.(u.^2 )[:, nz_plot],  "-", fillstyle = "none", label = vertical_method)
+    ax2.legend()
+    ax2.set_ylabel("|v|")
+    ax3.plot(xx, p0[:, nz_plot],  "-o", fillstyle = "none", label = "Init")
+    ax3.plot(xx, p[:, nz_plot], "-", fillstyle = "none", label = vertical_method)
+    ax3.legend()
+    ax3.set_ylabel("p")
+    fig.savefig("Hydrostatic_Balance_GCM"*vertical_method*"_z.png")
     
     
 end
@@ -97,4 +129,4 @@ t_end =  86400.0
 Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
 # hydrostatic_balance("WENO3", t_end,  Nz)
-# hydrostatic_balance("WENO5", t_end,  Nz)
+hydrostatic_balance("WENO5", t_end,  Nz)

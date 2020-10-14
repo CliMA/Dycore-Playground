@@ -336,6 +336,8 @@ function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxili
     α = 1.0/(20Δt)
     β = (z <= zD ? 0 : α*sin(π/2.0 * ((z - zD)/(zT - zD)))^2)
 
+
+
     source[2:3] .-= β*ρu
     
     return source
@@ -478,6 +480,11 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
 
     # state_auxiliary_vol_l[:, ρ_aux_id, :] .= 0.0
     # for e = 1:nelem
+    #     # state_auxiliary_vol_l[:, 1, :] .= g*z
+    #     # state_auxiliary_vol_l[il, :, e]
+
+    #     ρc, pc = state_primitive[div(Nl, 2),1, e], state_primitive[div(Nl, 2), 4, e]
+    #     state_primitive[:,4, e]
     #     state_auxiliary_vol_l[:, p_aux_id, e] .= sum(state_primitive[:,4, e])/Nl
     # end
     
