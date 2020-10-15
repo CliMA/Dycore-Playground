@@ -7,7 +7,7 @@ import PyPlot
 
 function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz::Int64=32)
     
-    Np = 3
+    Np = 4
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
     topology_type = "AtmoGCM"
