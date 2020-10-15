@@ -103,7 +103,7 @@ function Mesh(Nx::Int64, Nz::Int64, Nl::Int64, Nq::Int64, topology_type::String,
     ϕl_q = spectralinterpolate(ξl, ξq, wbl)
     Dl_q = spectralderivative(ξl, ξq, wbl)
     
-
+    
     if topology_type == "AtmoLES"
         (vol_l_geo, vol_q_geo, sgeo_h, sgeo_v) = compute_geometry(topology, ωl, ωq, Dl_l, ϕl_q, Dl_q)
     elseif topology_type == "AtmoGCM"
@@ -117,7 +117,7 @@ function Mesh(Nx::Int64, Nz::Int64, Nl::Int64, Nq::Int64, topology_type::String,
     else 
         error("topology type : ", topology_type, " not recognized")
     end
-
+    
     
     
     #
@@ -288,11 +288,11 @@ function compute_geometry_gcm(topology::Array{Float64, 3},
             
             θm , rm = (θθ[ix+1] + θθ[ix])/2.0, (rr[iz+1] + rr[iz])/2.0
             Δθ , Δr = (θθ[ix+1] - θθ[ix]), (rr[iz+1] - rr[iz])
-
+            
             # the map is (θm + ξΔr/2.0,  rm + ηΔr/2.0)
             # x, z = (rm + ηΔr/2.0)cos(θm + ξΔθ/2.0), (rm + ηΔr/2.0)sin(θm + ξΔθ/2.0)
             
-           
+            
             @assert(size(xe) == (Nl, 2))
             
             
@@ -325,7 +325,7 @@ function compute_geometry_gcm(topology::Array{Float64, 3},
                 #################
                 x, z = (rm)*cos(θm + ξl[i]*Δθ/2.0), (rm)*sin(θm + ξl[i]*Δθ/2.0)
                 M = abs(Δθ*rm*Δr * ωl[i]/2.0)
-
+                
                 
                 
                 vol_l_geo[:, i, e] .= x, z, M
@@ -353,7 +353,7 @@ function compute_geometry_gcm(topology::Array{Float64, 3},
                 #@info "1: ", M, ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z, x, z
                 ########
                 #x, z = (rm + ηΔr/2.0)*cos(θm + ξΔθ/2.0), (rm + ηΔr/2.0)*sin(θm + ξΔθ/2.0) @ η=0, ξ=ωl
-
+                
                 x, z = (rm)*cos(θm + ξq[i]*Δθ/2.0), (rm)*sin(θm + ξq[i]*Δθ/2.0)
                 M = abs(Δθ*rm*Δr * ωq[i]/2.0)
                 ∂x∂ξ = -(rm)*sin(θm + ξq[i]*Δθ/2.0)*Δθ/2.0
@@ -364,7 +364,7 @@ function compute_geometry_gcm(topology::Array{Float64, 3},
                 
                 detJ = abs(∂x∂ξ*∂z∂η - ∂x∂η*∂z∂ξ)
                 ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z = ∂z∂η/detJ, -∂x∂η/detJ, -∂z∂ξ/detJ, ∂x∂ξ/detJ
-
+                
                 #@info "2: ", M, ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z, x, z
                 
                 
@@ -429,13 +429,13 @@ function compute_geometry_gcm(topology::Array{Float64, 3},
                     # ∂ξ∂z, ∂η∂z
                     n = [ ∂ξ∂x*N[1] + ∂η∂x*N[2]  ; ∂ξ∂z*N[1] + ∂η∂z*N[2] ]
                     
-     
+                    
                     
                     # @info "1: ", n[1]*sM, n[2]*sM,  x, z
                     ########
                     #x, z = (rm + ηΔr/2.0)*cos(θm + ξΔθ/2.0), (rm + ηΔr/2.0)*sin(θm + ξΔθ/2.0) @ η=0, ξ=ωl
-
-
+                    
+                    
                     if iface == 1 
                         x, z = (rm - Δr/2.0)*cos(θm + ξl[i]*Δθ/2.0), (rm - Δr/2.0)*sin(θm + ξl[i]*Δθ/2.0)
                         n = [-cos(θm + ξl[i]*Δθ/2.0); -sin(θm + ξl[i]*Δθ/2.0)]
@@ -448,7 +448,7 @@ function compute_geometry_gcm(topology::Array{Float64, 3},
                     
                     
                     # @info "2: ", n[1]*sM, n[2]*sM,  x, z
-
+                    
                     # error("stop")
                     
                     
@@ -702,7 +702,7 @@ function Mesh_test()
         weighted_e     = [0.0; 0.0]
         sgeo_v, sgeo_h = mesh.sgeo_v, mesh.sgeo_h 
         for e = 1:nelem
-   
+            
             weighted_e .= 0.0
             
             for il = 1:size(sgeo_v, 2)
@@ -711,7 +711,7 @@ function Mesh_test()
                     weighted_e += [n1*sM; n2*sM]
                 end
             end
-       
+            
             
             for il = 1:size(sgeo_h, 2)
                 for iface = 1:2
@@ -720,11 +720,36 @@ function Mesh_test()
                 end
             end
             
-
+            
             weighted_e_tot += abs.(weighted_e) 
             
         end
         @info "sum of edge length weighted norm is ", weighted_e_tot
+        
+        # second geometric law test
+        
+        for e = 1:nelem
+            
+            weighted_e .= 0.0
+            
+            for il = 1:Nl
+                
+                n1⁻, n2⁻, sM⁻, x⁻, z⁻ = sgeo_v[:, il, 1, e]
+                n1⁺, n2⁺, sM⁺, x⁺, z⁺ = sgeo_v[:, il, 2, e]
+                M =  mesh.vol_l_geo[3, il, e]
+                k = [x⁺ - x⁻ ; z⁺ - z⁻]
+                Δz = sqrt((x⁺ - x⁻)^2 + (z⁺ - z⁻)^2)
+                k /= Δz
+                weighted_e += ([n1⁻*sM⁻; n2⁻*sM⁻]  - [n1⁺*sM⁺; n2⁺*sM⁺])*Δz/2.0 + k * M
+                
+                
+            end
+            
+            
+            weighted_e_tot += abs.(weighted_e) 
+            
+        end
+        @info "sum of second geometric conservation law norm is ", weighted_e_tot
         
         
         # check left/right edge length
@@ -753,4 +778,4 @@ end
 
 
 
-# Mesh_test()
+Mesh_test()
