@@ -67,19 +67,20 @@ function reconstruction_1d_fv(app::Application, state_primitive_col, Δzc_col,
         state_primitive0  .= state_primitive_col[:, iz]
         
         state_primitive0⁻ .= state_primitive0 ; 
-        state_primitive0⁻[4] = state_primitive0[4] + g*(state_primitive0[1]*Δz + state_primitive0⁻[1]*Δz⁻)/2.0
+        state_primitive0⁻[4] = state_primitive0[4] + g*(state_primitive0[1]*Δz + state_primitive_col[1, mod1(iz-1,Nz)]*Δz⁻)/2.0
         state_primitive_face⁺[:, iz] .= state_primitive0
         state_primitive_face⁺[4, iz]  = state_primitive0[4] + g*(state_primitive0[1]*Δz)/2.0
         
         state_primitive0⁺ .= state_primitive0 ; 
-        state_primitive0⁺[4] = state_primitive0[4] - g*(state_primitive0[1]*Δz + state_primitive0⁺[1]*Δz⁺)/2.0
+        state_primitive0⁺[4] = state_primitive0[4] - g*(state_primitive0[1]*Δz + state_primitive_col[1, mod1(iz+1,Nz)]*Δz⁺)/2.0
         state_primitive_face⁻[:, iz+1] .= state_primitive0
         state_primitive_face⁻[4, iz+1]  = state_primitive0[4] - g*(state_primitive0[1]*Δz)/2.0
         
         Δstate⁺ = (state_primitive_col[:, mod1(iz+1,Nz)] - state_primitive0⁺)
         Δstate⁻ =                                                             - (state_primitive_col[:, mod1(iz-1,Nz)] - state_primitive0⁻)
         
-        
+        # @info iz, Δstate⁺, Δstate⁻
+        # @info state_primitive_col[:, mod1(iz-1,Nz)], state_primitive_col[:, iz], state_primitive_col[:, mod1(iz+1,Nz)]
         ∂state = 2.0*limiter(Δstate⁺/(Δz⁺ + Δz), Δstate⁻/(Δz⁻ + Δz))
         
         
@@ -87,6 +88,8 @@ function reconstruction_1d_fv(app::Application, state_primitive_col, Δzc_col,
         state_primitive_face⁻[:, iz+1] .+=  ∂state * Δz/2.0
         
     end
+
+    # error("stop")
     
 end
 

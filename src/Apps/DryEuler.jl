@@ -16,7 +16,7 @@ mutable struct DryEuler <: Application
     
     bc_right_type::String
     bc_right_data::Union{Array{Float64, 1}, Nothing}
-
+    
     use_ref_state::Bool
     
     
@@ -25,12 +25,12 @@ mutable struct DryEuler <: Application
     γ::Float64
     Rd::Float64
     MSLP::Float64
-
-
+    
+    
     Δt::Float64
     zT::Float64
     zD::Float64
-
+    
 end
 
 function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1}, Nothing},
@@ -56,7 +56,7 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     γ = 1.4
     Rd = 287.058
     MSLP = 1.01325e5
-
+    
     Δt, zT, zD = -1.0, -1.0, -1.0
     
     
@@ -77,12 +77,12 @@ end
 
 
 function compute_min_max(app::DryEuler, state_primitive::Array{Float64,3})
-
+    
     @info "min ρ = ", minimum(state_primitive[:,1,:]), " max ρ = ", maximum(state_primitive[:,1,:])
     @info "min u = ", minimum(state_primitive[:,2,:]), " max u = ", maximum(state_primitive[:,2,:])
     @info "min w = ", minimum(state_primitive[:,3,:]), " max w = ", maximum(state_primitive[:,3,:])
     @info "min p = ", minimum(state_primitive[:,4,:]), " max p = ", maximum(state_primitive[:,4,:])
-
+    
 end
 
 function internal_energy(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe::Float64, Φ::Float64)
@@ -174,14 +174,14 @@ function flux_first_order(app::DryEuler, state_prognostic::Array{Float64, 1}, st
     dim = 2
     ρ, ρu, ρe = state_prognostic[1], state_prognostic[2:dim+1], state_prognostic[dim+2]
     Φ = state_auxiliary[1]
-
+    
     p_ref = state_auxiliary[4]
- 
+    
     
     u = ρu/ρ
     e_int = internal_energy(app, ρ, ρu, ρe, Φ)
     p = air_pressure(app, ρ,  e_int)
-
+    
     
     return flux_first_order(app, ρ, ρu, ρe, p, p_ref)
 end
@@ -191,17 +191,17 @@ function flux_first_order(app::DryEuler, ρ::Float64, ρu::Array{Float64,1}, ρe
     
     # test
     # p_ref = 0.0
-
+    
     u = ρu/ρ
     flux = 
     [ρu[1] ρu[2];
     ρu[1]*u[1]+p-p_ref   ρu[1]*u[2];
     ρu[2]*u[1]     ρu[2]*u[2]+p-p_ref; 
     (ρe+p)*u[1]    (ρe+p)*u[2]]
-
-
+    
+    
     # @info p, p_ref
-
+    
     
     return flux
 end
@@ -224,8 +224,8 @@ function numerical_flux_first_order(app::DryEuler,
     
     Φ = state_auxiliary⁻[1]
     p_ref⁻, p_ref⁺ = state_auxiliary⁻[4], state_auxiliary⁺[4]
-  
-
+    
+    
     γ = app.γ
     
     ρ⁻, ρu⁻, ρe⁻ = state_prognostic⁻[1], state_prognostic⁻[2:dim+1], state_prognostic⁻[dim+2]
@@ -244,7 +244,7 @@ function numerical_flux_first_order(app::DryEuler,
     
     flux⁻ = flux_first_order(app, ρ⁻, ρu⁻, ρe⁻, p⁻, p_ref⁻) * n_ij
     flux⁺ = flux_first_order(app, ρ⁺, ρu⁺, ρe⁺, p⁺, p_ref⁺) * n_ij
-
+    
     
     un⁻= u⁻' * n_ij
     ut⁻= u⁻' * t_ij
@@ -306,11 +306,11 @@ function wall_flux_first_order(app::DryEuler,
     p = air_pressure(app, ρ,  e_int)
     
     p_ref = state_auxiliary[4]
-
-   
+    
+    
     # test
     # p_ref = 0.0
-
+    
     return [0.0, (p - p_ref) * n[1] , (p - p_ref) * n[2], 0.0]
 end
 
@@ -318,16 +318,16 @@ end
 function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     ρ = state_prognostic[1]
     ρ_ref = state_auxiliary[5]
-
-
+    
+    
     ∇Φ = state_auxiliary[2:3]
-
+    
     
     # test
     # ρ_ref = 0.0
     source = [0.0; -(ρ - ρ_ref)*∇Φ ; 0.0]
-
-
+    
+    
     # sponge layer
     g = app.g
     z = state_auxiliary[1]/g
@@ -335,9 +335,9 @@ function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxili
     ρu = state_prognostic[2:3]
     α = 1.0/(20Δt)
     β = (z <= zD ? 0 : α*sin(π/2.0 * ((z - zD)/(zT - zD)))^2)
-
-
-
+    
+    
+    
     source[2:3] .-= β*ρu
     
     return source
@@ -354,7 +354,7 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
     g = app.g
     topology_type = mesh.topology_type
     ϕl_q = mesh.ϕl_q
-
+    
     # @info "topology_type", topology_type
     # error("stop")
     
@@ -424,37 +424,37 @@ end
 #     ϕl_q = mesh.ϕl_q
 #     g =  app.g
 #     Nl, num_state_auxiliary, nelem = size(state_auxiliary_vol_l)
-    
+
 #     state_auxiliary_vol_l[:, ρ_aux_id, :] .= state_primitive[:, 1, :]
-    
+
 #     for iz = 1:Nz
 #         for ix = 1:Nx
 #             e  = ix + (iz-1)*Nx
 #             e⁻ = ix + (iz-2)*Nx
 #             for il = 1:Nl
-                
-                
+
+
 #                 Δz = Δzc[il, ix, iz]
 #                 ρ, p = state_primitive[il, 1, e], state_primitive[il, 4, e]
-                
+
 #                 if e⁻ > 0
 #                     state_auxiliary_surf_v[il,  p_aux_id, 1, e] = state_auxiliary_surf_v[il,  p_aux_id, 2, e⁻]
 #                 else # on the ground
 #                     state_auxiliary_surf_v[il,  p_aux_id, 1, e] = p + ρ*g*Δz/2.0
 #                 end
-                
+
 #                 state_auxiliary_surf_v[il,  p_aux_id, 2, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz
 #                 state_auxiliary_vol_l[il, p_aux_id, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz/2.0
-                
+
 #                 if il == 1
 #                     state_auxiliary_surf_h[1,  p_aux_id, 1, e] = state_auxiliary_vol_l[il, p_aux_id, e]
 #                 elseif il == Nl
 #                     state_auxiliary_surf_h[1,  p_aux_id, 2, e] = state_auxiliary_vol_l[il, p_aux_id, e]
 #                 end
-                
-                
+
+
 #             end
-            
+
 #             state_auxiliary_vol_q[:, p_aux_id, e] .= ϕl_q * state_auxiliary_vol_l[:, p_aux_id, e]
 #         end
 #     end
@@ -466,7 +466,7 @@ end
 function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Array{Float64, 3},
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
-
+    
     if !app.use_ref_state;  return;   end
     # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
     p_aux_id , ρ_aux_id = 4 , 5
@@ -477,12 +477,12 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
     
     state_auxiliary_vol_l[:, ρ_aux_id, :] .= state_primitive[:, 1, :]
     state_auxiliary_vol_l[:, p_aux_id, :] .= state_primitive[:, 4, :]
-
+    
     # state_auxiliary_vol_l[:, ρ_aux_id, :] .= 0.0
     # for e = 1:nelem
     #     # state_auxiliary_vol_l[:, 1, :] .= g*z
     #     # state_auxiliary_vol_l[il, :, e]
-
+    
     #     ρc, pc = state_primitive[div(Nl, 2),1, e], state_primitive[div(Nl, 2), 4, e]
     #     state_primitive[:,4, e]
     #     state_auxiliary_vol_l[:, p_aux_id, e] .= sum(state_primitive[:,4, e])/Nl
@@ -495,10 +495,10 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
                 
                 Δz = Δzc[il, ix, iz]
                 # ρ, p = state_primitive[il, 1, e], state_primitive[il, 4, e]
-
+                
                 ρ, p = state_auxiliary_vol_l[il, ρ_aux_id, e], state_auxiliary_vol_l[il, p_aux_id, e]
                 
-
+                
                 state_auxiliary_surf_v[il,  p_aux_id, 1, e] = p + ρ*g*Δz/2.0
                 state_auxiliary_surf_v[il,  p_aux_id, 2, e] = p - ρ*g*Δz/2.0
                 
@@ -519,7 +519,7 @@ end
 function init_state_auxiliary!(app::DryEuler, mesh::Mesh, profile::DecayingTemperatureProfile, state_primitive,
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
-
+    
     if !app.use_ref_state;  return;   end
     # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
     p_aux_id , ρ_aux_id = 4 , 5
@@ -536,7 +536,7 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh, profile::DecayingTempe
                 
                 # center points
                 alt = state_auxiliary_vol_l[il, 1, e]/g
-
+                
                 Tv, p, ρ = profile(alt)
                 state_auxiliary_vol_l[il, p_aux_id, e], state_auxiliary_vol_l[il, ρ_aux_id, e] = p, ρ
                 # @show state_primitive[il, 1, e] - ρ , ρ 
@@ -547,14 +547,14 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh, profile::DecayingTempe
                 elseif il == Nl
                     state_auxiliary_surf_h[1,  p_aux_id, 2, e], state_auxiliary_surf_h[1,  ρ_aux_id, 2, e] = p, ρ
                 end
-
+                
                 #top bottom points
                 for ind_f = 1:2
                     alt = state_auxiliary_surf_v[il,  1, ind_f, e]/g
                     Tv, p, ρ = profile(alt)
                     state_auxiliary_surf_v[il,  p_aux_id, ind_f, e], state_auxiliary_surf_v[il,  ρ_aux_id, ind_f, e] = p, ρ                
                 end
-         
+                
             end
             
             state_auxiliary_vol_q[:, p_aux_id, e] .= ϕl_q * state_auxiliary_vol_l[:, p_aux_id, e]
@@ -593,12 +593,12 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
             Φ = state_auxiliary[il, 1, e]
             
             Tv, p, ρ = profile(Φ/g)
-
+            
             ρu = ρ*u_init
             ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
             
             state_prognostic[il, :, e] .= [ρ ; ρu ; ρe]
-
+            
             # @show ρ, u_init, p
             # @show prog_to_prim(app, state_prognostic[il, :, e], state_auxiliary[il, :, e])
             
@@ -623,6 +623,92 @@ function init_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::
     
     return profile
 end
+
+
+
+
+#################################################################################################
+"""
+update state_prognostic
+and app.bc_top_data
+"""
+function init_discrete_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3},
+    T_virt_surf::Float64, T_min_ref::Float64, H_t::Float64)
+    
+    
+    Nl,Nx,Nz = mesh.Nl, mesh.Nx, mesh.Nz
+    
+    profile = DecayingTemperatureProfile(app, T_virt_surf, T_min_ref, H_t)
+    γ = app.γ
+    
+    topology_type = mesh.topology_type
+    topology_size = mesh.topology_size
+    
+    vol_l_geo = mesh.vol_l_geo
+    u_init = [0.0; 0.0]
+    Δzc = mesh.Δzc
+    g = app.g
+    @assert(g > 0.0)
+    
+    for ix = 1:Nx
+        for il = 1:Nl
+            
+            p⁻, ρ⁻, Δz⁻ = 0.0, 0.0, 0.0
+            for iz = 1:Nz
+                e  = ix + (iz - 1)*Nz
+                e⁻ = ix + (iz - 2)*Nz
+                # p_{iz - 1}  - p_{iz} - = ρ_{iz}*g*Δz_{iz}/2 + ρ_{iz-1}*g*Δz_{iz-1}/2
+                Δz = Δzc[il, ix, iz]
+                Φ = state_auxiliary[il, 1, e]
+                alt = Φ/g
+                Tv, p, ρ = profile(alt)
+
+                if iz > 1
+                    # hydrostatic correction
+                    # @show ρ, (p⁻ - p -  ρ⁻*g*Δz⁻/2.0)/ (g*Δz/2.0)
+                    ρ = (p⁻ - p -  ρ⁻*g*Δz⁻/2.0)/ (g*Δz/2.0)
+                    
+                end
+                p⁻, ρ⁻, Δz⁻  = p, ρ, Δz
+                
+                # if ix == 1 && il == 1
+                #     @show iz, p, ρ, Δz
+                # end
+                 
+
+                ρu = ρ*u_init
+                ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
+                
+                state_prognostic[il, :, e] .= [ρ ; ρu ; ρe]
+                
+                # @show ρ, u_init, p
+                # @show prog_to_prim(app, state_prognostic[il, :, e], state_auxiliary[il, :, e])
+                
+                # error("stop")
+            end
+
+            # error("stop")
+        end
+    end
+    
+    # 
+    if app.bc_top_type == "outlet"
+        topology = mesh.topology
+        x, z = topology[:, 1, end] # anyone should be the same
+        if topology_type == "AtmoLES"
+            alt = z
+        elseif topology_type == "AtmoGCM"
+            alt = sqrt(x^2 + z^2) - topology_size[1]
+        else 
+            error("topology_type : ", topology_type, " has not implemented yet.")
+        end
+        Tv, p, ρ = profile(alt)
+        app.bc_top_data = [ρ; 0.0; 0.0; p]
+    end
+    
+    return profile
+end
+
 
 # initialize 
 function init_state!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, func::Function)

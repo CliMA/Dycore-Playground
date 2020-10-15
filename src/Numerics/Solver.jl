@@ -148,7 +148,7 @@ function solve!(solver::Solver)
         time_advance!(solver, Q, dt)
         
         # apply filter
-        apply_filter(Q)
+        # apply_filter(Q)
         
         t += dt
         
@@ -280,8 +280,9 @@ end
 
 
 function apply_filter(Q::Array{Float64,3})
-
-    # return ;
+    Q[:, 2, :] .= 0.0
+    Q[:, 3, :] .= 0.0
+    return ;
 
     Nl, num_state_prognostic, nelem = size(Q)
     

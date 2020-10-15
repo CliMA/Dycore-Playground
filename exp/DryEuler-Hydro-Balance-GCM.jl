@@ -32,7 +32,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     app = DryEuler("no-penetration", nothing, "no-penetration", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity)
     update_sponge_params!(app, -1.0, R-r, (R-r)*1/2.0)
 
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.4, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
     solver = Solver(app, mesh, params)
     
     
@@ -40,7 +40,8 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     num_state_prognostic, nelem = app.num_state_prognostic, Nx*Nz 
     state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
     T_virt_surf, T_min_ref, H_t = 280.0, 230.0, 9.0e3
-    profile = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
+    # profile = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
+    profile = init_discrete_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     set_init_state!(solver, state_prognostic_0)
 
 
@@ -59,7 +60,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
 
 
 
-    visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_GCM_init_"*vertical_method*".png")
+    # visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_GCM_init_"*vertical_method*".png")
 
  
     Q = solve!(solver)
@@ -110,10 +111,10 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     ax1.plot(xx, ρ[:, nz_plot], "-", fillstyle = "none", label = vertical_method)
     ax1.legend()
     ax1.set_ylabel("ρ")
-    #ax2.plot(xx, sqrt.(u0.^2 + w0.^2)[:, nz_plot], "-o", fillstyle = "none", label = "Init")
-    #ax2.plot(xx, sqrt.(u.^2 + w.^2)[:, nz_plot],  "-", fillstyle = "none", label = vertical_method)
-    ax2.plot(xx, sqrt.(u0.^2 )[:, nz_plot], "-o", fillstyle = "none", label = "Init")
-    ax2.plot(xx, sqrt.(u.^2 )[:, nz_plot],  "-", fillstyle = "none", label = vertical_method)
+    ax2.plot(xx, sqrt.(u0.^2 + w0.^2)[:, nz_plot], "-o", fillstyle = "none", label = "Init")
+    ax2.plot(xx, sqrt.(u.^2 + w.^2)[:, nz_plot],  "-", fillstyle = "none", label = vertical_method)
+    # ax2.plot(xx, sqrt.(u0.^2 )[:, nz_plot], "-o", fillstyle = "none", label = "Init")
+    # ax2.plot(xx, sqrt.(u.^2 )[:, nz_plot],  "-", fillstyle = "none", label = vertical_method)
     ax2.legend()
     ax2.set_ylabel("|v|")
     ax3.plot(xx, p0[:, nz_plot],  "-o", fillstyle = "none", label = "Init")
@@ -125,8 +126,12 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
 end
 
-t_end =  86400.0 
+t_end =  5000.0# 86400.0 
 Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
 # hydrostatic_balance("WENO3", t_end,  Nz)
-hydrostatic_balance("WENO5", t_end,  Nz)
+# hydrostatic_balance("WENO5", t_end,  Nz)
+
+
+
+
