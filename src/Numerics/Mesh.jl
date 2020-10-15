@@ -104,20 +104,21 @@ function Mesh(Nx::Int64, Nz::Int64, Nl::Int64, Nq::Int64, topology_type::String,
     Dl_q = spectralderivative(ξl, ξq, wbl)
     
     
-    if topology_type == "AtmoLES"
-        (vol_l_geo, vol_q_geo, sgeo_h, sgeo_v) = compute_geometry(topology, ωl, ωq, Dl_l, ϕl_q, Dl_q)
-    elseif topology_type == "AtmoGCM"
-        r, R = topology_size
-        rr, θθ = Array(LinRange(r, R,  Nz+1)), Array(LinRange(0, -2π, Nx+1))
-        (vol_l_geo, vol_q_geo, sgeo_h, sgeo_v) = compute_geometry_gcm(topology, 
-        rr, θθ,
-        ξl, ωl, 
-        ξq, ωq,
-        Dl_l, ϕl_q, Dl_q)
-    else 
-        error("topology type : ", topology_type, " not recognized")
-    end
+    # if topology_type == "AtmoLES"
+    #     (vol_l_geo, vol_q_geo, sgeo_h, sgeo_v) = compute_geometry(topology, ωl, ωq, Dl_l, ϕl_q, Dl_q)
+    # elseif topology_type == "AtmoGCM"
+    #     r, R = topology_size
+    #     rr, θθ = Array(LinRange(r, R,  Nz+1)), Array(LinRange(0, -2π, Nx+1))
+    #     (vol_l_geo, vol_q_geo, sgeo_h, sgeo_v) = compute_geometry_gcm(topology, 
+    #     rr, θθ,
+    #     ξl, ωl, 
+    #     ξq, ωq,
+    #     Dl_l, ϕl_q, Dl_q)
+    # else 
+    #     error("topology type : ", topology_type, " not recognized")
+    # end
     
+    (vol_l_geo, vol_q_geo, sgeo_h, sgeo_v) = compute_geometry(topology, ωl, ωq, Dl_l, ϕl_q, Dl_q)
     
     
     #
@@ -619,6 +620,41 @@ function compute_geometry(topology::Array{Float64, 3},
         end
     end 
     
+    CORRECTION = false
+    if CORRECTION
+        # mass correction
+        ks = zeros(Float64, dim, Nl)
+        kMs = zeros(Float64, dim, Nl)
+        for e = 1:nelem   
+            for il = 1:Nl
+                n1⁻, n2⁻, sM⁻, x⁻, z⁻ = sgeo_v[:, il, 1, e]
+                n1⁺, n2⁺, sM⁺, x⁺, z⁺ = sgeo_v[:, il, 2, e]
+                
+                k = [x⁺ - x⁻ ; z⁺ - z⁻]
+                Δz = sqrt((x⁺ - x⁻)^2 + (z⁺ - z⁻)^2)
+                k /= Δz
+                kM = ([n1⁺*sM⁺; n2⁺*sM⁺] - [n1⁻*sM⁻; n2⁻*sM⁻])*Δz/2.0 
+                
+                # @info "1: ", k[1]*kM[2] - k[2]*kM[1]
+                
+                ks[:, il] .= k
+                kMs[:, il] .= kM
+                
+                # @show "2: ", vol_l_geo[3, il, e]
+            end
+            for il = 1:Nl
+                k = (ks[:, il] + ks[:, Nl-il+1])
+                kM = (kMs[:, il] + kMs[:, Nl-il+1])
+                # @info "2: ", k[1]*kM[2] - k[2]*kM[1], k, kM
+                k_norm = sqrt(k[1]^2 + k[2]^2)
+                # @info "1 :", vol_l_geo[3, il, e]
+                vol_l_geo[3, il, e] = k' * kM/k_norm^2
+                # @info "2 :", vol_l_geo[3, il, e]
+            end
+        end
+    end
+    
+    
     return vol_l_geo, vol_q_geo, sgeo_h, sgeo_v
 end
 
@@ -657,7 +693,7 @@ function Mesh_test()
     Np = 4
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
-    Nx, Nz = 8, 4
+    Nx, Nz = 32, 4
     
     # Nx, Nz = 2, 2
     
@@ -676,7 +712,8 @@ function Mesh_test()
             
         elseif topology_type == "AtmoGCM"
             
-            r, R = 2.0, 4.0
+            
+            r, R = 2.0, 4.0#6000.0e3, 6000.0e3+30.0e3
             topology_size = [r, R]
             
             topology = topology_gcm(Nl, Nx, Nz, r, R)
@@ -727,7 +764,8 @@ function Mesh_test()
         @info "sum of edge length weighted norm is ", weighted_e_tot
         
         # second geometric law test
-        
+        weighted_e_tot = [0.0; 0.0]
+        weighted_e     = [0.0; 0.0]
         for e = 1:nelem
             
             weighted_e .= 0.0
@@ -778,4 +816,4 @@ end
 
 
 
-Mesh_test()
+# Mesh_test()
