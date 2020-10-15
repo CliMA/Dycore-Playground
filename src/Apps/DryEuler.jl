@@ -655,8 +655,7 @@ function init_discrete_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_pro
             
             p⁻, ρ⁻, Δz⁻ = 0.0, 0.0, 0.0
             for iz = 1:Nz
-                e  = ix + (iz - 1)*Nz
-                e⁻ = ix + (iz - 2)*Nz
+                e  = ix + (iz - 1)*Nx
                 # p_{iz - 1}  - p_{iz} - = ρ_{iz}*g*Δz_{iz}/2 + ρ_{iz-1}*g*Δz_{iz-1}/2
                 Δz = Δzc[il, ix, iz]
                 Φ = state_auxiliary[il, 1, e]

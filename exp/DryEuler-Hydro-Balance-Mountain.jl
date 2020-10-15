@@ -44,7 +44,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     # set initial condition
     state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
     T_virt_surf, T_min_ref, H_t = 280.0, 230.0, 9.0e3
-    profile_0 = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
+    profile_0 = init_discrete_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     set_init_state!(solver, state_prognostic_0)
 
 

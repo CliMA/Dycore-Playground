@@ -389,7 +389,10 @@ function compute_geometry(topology::Array{Float64, 3},
                     # @info "sM compute ", iface, i, ∂x∂ξ, ∂x∂η, ∂z∂ξ, ∂z∂η, n
                     sgeo_v[:, i, iface, e] .= n[1], n[2], sM, x, z
                 end
-            end 
+            end
+            
+            
+            # update volume 
         end
     end 
     
