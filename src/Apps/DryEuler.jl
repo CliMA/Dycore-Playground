@@ -332,13 +332,13 @@ function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxili
     g = app.g
     z = state_auxiliary[1]/g
     Δt, zT, zD = app.Δt, app.zT, app.zD
-    ρu = state_prognostic[2:3]
+    ρ, ρu = state_prognostic[1], state_prognostic[2:3]
     α = 1.0/(20Δt)
     β = (z <= zD ? 0 : α*sin(π/2.0 * ((z - zD)/(zT - zD)))^2)
     
     
-    
-    source[2:3] .-= β*ρu
+    u_init = [10.0; 0.0]
+    source[2:3] .-= β*(ρu - ρ*u_init)
     
     return source
 end
@@ -708,6 +708,106 @@ function init_discrete_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_pro
     return profile
 end
 
+
+#################################################################################################
+"""
+update state_prognostic
+and app.bc_top_data
+"""
+#################################################################################################
+"""
+update state_prognostic
+and app.bc_top_data
+"""
+function init_discrete_hydrostatic_balance!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3},
+    f_profile::Function, u_init::Array{Float64, 1})
+    
+    @show  f_profile
+    
+    Nl,Nx,Nz = mesh.Nl, mesh.Nx, mesh.Nz
+    
+    
+    γ = app.γ
+    
+    topology_type = mesh.topology_type
+    topology_size = mesh.topology_size
+    
+    vol_l_geo = mesh.vol_l_geo
+
+    Δzc = mesh.Δzc
+    g = app.g
+
+    
+    for ix = 1:Nx
+        for il = 1:Nl
+            
+            # p⁻, ρ⁻, Δz⁻ = 0.0, 0.0, 0.0
+            # for iz = 1:Nz
+            #     e  = ix + (iz - 1)*Nx
+            #     # p_{iz - 1}  - p_{iz} - = ρ_{iz}*g*Δz_{iz}/2 + ρ_{iz-1}*g*Δz_{iz-1}/2
+            #     Δz = Δzc[il, ix, iz]
+            #     Φ = state_auxiliary[il, 1, e]
+            #     alt = Φ/g
+            #     p, ρ = f_profile(alt)
+            #     ρ_o = ρ
+            #     if iz > 1
+            #         # hydrostatic correction
+            #         # @show ρ, (p⁻ - p -  ρ⁻*g*Δz⁻/2.0)/ (g*Δz/2.0)
+            #         ρ = (p⁻ - p -  ρ⁻*g*Δz⁻/2.0)/ (g*Δz/2.0)
+                    
+            #     end
+            #     p⁻, ρ⁻, Δz⁻  = p, ρ, Δz
+                
+                 
+
+            #     ρu = ρ*u_init
+            #     ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
+                
+            #     @info ρ, ρ_o, p
+            #     state_prognostic[il, :, e] .= [ρ ; ρu ; ρe]
+                
+            # end
+
+
+            p⁺, ρ⁺, Δz⁺ = 0.0, 0.0, 0.0
+            for iz = Nz:-1:1
+                e  = ix + (iz - 1)*Nx
+                # p_{iz - 1}  - p_{iz} - = ρ_{iz}*g*Δz_{iz}/2 + ρ_{iz-1}*g*Δz_{iz-1}/2
+                Δz = Δzc[il, ix, iz]
+                Φ = state_auxiliary[il, 1, e]
+                alt = Φ/g
+                p, ρ = f_profile(alt)
+                ρ_o = ρ
+                # if iz < Nz
+                #     # hydrostatic correction
+                #     # @show ρ, (p⁻ - p -  ρ⁻*g*Δz⁻/2.0)/ (g*Δz/2.0)
+                #     ρ = (p - p⁺ -  ρ⁺*g*Δz⁺/2.0)/ (g*Δz/2.0)
+
+                
+                # end
+
+                
+                p⁺, ρ⁺, Δz⁺  = p, ρ, Δz
+
+                ρu = ρ*u_init
+                ρe = p/(γ-1) + 0.5*(ρu[1]*u_init[1] + ρu[2]*u_init[2]) + ρ*Φ
+                
+                #@info ρ, ρ_o, p
+                state_prognostic[il, :, e] .= [ρ ; ρu ; ρe]
+                
+            end
+
+            # error("stop")
+
+  
+
+
+
+        end
+    end
+    
+    return 
+end
 
 # initialize 
 function init_state!(app::DryEuler, mesh::Mesh, state_prognostic::Array{Float64, 3}, func::Function)

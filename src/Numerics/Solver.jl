@@ -238,8 +238,8 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     
     
     
-    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_l, state_auxiliary_vol_q, dQ)
-    #horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
+    # horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_l, state_auxiliary_vol_q, dQ)
+    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
 
     
     # @show "horizontal_volume_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
@@ -304,7 +304,7 @@ end
 function compute_cfl_dt(app::Application, mesh::Mesh, Q::Array{Float64,3}, Q_aux::Array{Float64,3}, cfl::Float64)
     
     @assert(cfl >= 0.0)
-    
+    Np = mesh.Nl - 1
     Δs_min = mesh.Δs_min
     dim, Nl, nelem = size(Δs_min)
     
@@ -318,7 +318,7 @@ function compute_cfl_dt(app::Application, mesh::Mesh, Q::Array{Float64,3}, Q_aux
             
             
             
-            dt_h = min(dt_h, cfl * Δs_min[1, il, e]/u)
+            dt_h = min(dt_h, cfl/Np * Δs_min[1, il, e]/u)
             
             dt_v = min(dt_v, cfl * Δs_min[2, il, e]/u)
         end

@@ -12,7 +12,7 @@ state_primitive = Array(num_state_prognostic, Nz), Δz = Array(Nz)
 function limiter(Δ⁻::Array{Float64,1}, Δ⁺::Array{Float64,1})
     
     Δ = zeros(size(Δ⁻))
- 
+    
     
     num_state = length(Δ⁻)
     for s = 1:num_state
@@ -88,7 +88,7 @@ function reconstruction_1d_fv(app::Application, state_primitive_col, Δzc_col,
         state_primitive_face⁻[:, iz+1] .+=  ∂state * Δz/2.0
         
     end
-
+    
     # error("stop")
     
 end
@@ -146,7 +146,7 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
             
             
             #constant reconstruction
-    
+            
             state_primitive_face⁺[:, 1] .= state_primitive0;
             state_primitive_face⁺[4, 1]  = state_primitive0[4] + g*state_primitive0[1]*Δz/2.0
             state_primitive_face⁺[:, 1] .= bc_impose(app, state_primitive_face⁺[:,1], bc_bottom_type, bc_bottom_n)
@@ -155,7 +155,7 @@ function reconstruction_1d(app::Application, method::String, state_primitive_col
             state_primitive_face⁻[:, 2].= state_primitive0;
             
             # state_primitive_face⁻[:, 2].=  Δz⁺/(Δz + Δz⁺)*state_primitive0 + Δz/(Δz + Δz⁺)*state_primitive_col[:, 2];
-
+            
             state_primitive_face⁻[4, 2] = state_primitive0[4] - g*state_primitive0[1]*Δz/2.0
             
             
@@ -258,15 +258,16 @@ function vertical_interface_tendency!(
     bc_top_type, bc_top_data = app.bc_top_type, app.bc_top_data
     
     
-    state_primitive_face⁺  = zeros(Float64, num_state_prognostic, Nz+1)
-    state_primitive_face⁻  = zeros(Float64, num_state_prognostic, Nz+1)
-    state_prognostic_face⁺ = zeros(Float64, num_state_prognostic, Nz+1)
-    state_prognostic_face⁻ = zeros(Float64, num_state_prognostic, Nz+1)
-    ghost_state⁺ = zeros(Float64, num_state_prognostic)
-    ghost_state⁻ = zeros(Float64, num_state_prognostic)
     
     
-    for ix = 1:Nx
+    
+    
+    Threads.@threads for ix = 1:Nx
+        state_primitive_face⁺  = zeros(Float64, num_state_prognostic, Nz+1)
+        state_primitive_face⁻  = zeros(Float64, num_state_prognostic, Nz+1)
+        state_prognostic_face⁺ = zeros(Float64, num_state_prognostic, Nz+1)
+        state_prognostic_face⁻ = zeros(Float64, num_state_prognostic, Nz+1)
+        
         for il = 1:Nl
             # single colume treatment  
             ##########
@@ -337,7 +338,7 @@ function vertical_interface_tendency!(
                     end
                     
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
-
+                    
                     # @info iz, sM * local_flux
                     
                     
@@ -366,8 +367,8 @@ function vertical_interface_tendency!(
                     end
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
-
-
+                    
+                    
                     # @info iz, sM * local_flux
                     
                     
@@ -388,7 +389,7 @@ function vertical_interface_tendency!(
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
-
+                    
                     # if iz == 2
                     #     @info state_primitive_face⁻[:,2], state_primitive_face⁺[:,2], local_aux⁻, local_aux⁺
                     #     @show state_prognostic_face⁻[:, iz],  state_prognostic_face⁺[:, iz]
@@ -399,7 +400,7 @@ function vertical_interface_tendency!(
                     
                 end
             end 
-
+            
             # @info tendency[il, :, ix:Nx:end]
             # error("stop")
             
