@@ -690,7 +690,7 @@ end
 
 
 function Mesh_test()
-    Np = 4
+    Np = 2
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
     Nx, Nz = 32, 4
@@ -774,10 +774,12 @@ function Mesh_test()
                 
                 n1⁻, n2⁻, sM⁻, x⁻, z⁻ = sgeo_v[:, il, 1, e]
                 n1⁺, n2⁺, sM⁺, x⁺, z⁺ = sgeo_v[:, il, 2, e]
+                @info "error: ", n1⁻ * n2⁺ - n2⁻ * n1⁺
                 M =  mesh.vol_l_geo[3, il, e]
                 k = [x⁺ - x⁻ ; z⁺ - z⁻]
+                k = [n1⁺, n2⁺]
                 Δz = sqrt((x⁺ - x⁻)^2 + (z⁺ - z⁻)^2)
-                k /= Δz
+                k /= norm(k)
                 weighted_e += ([n1⁻*sM⁻; n2⁻*sM⁻]  - [n1⁺*sM⁺; n2⁺*sM⁺])*Δz/2.0 + k * M
                 
                 
@@ -816,4 +818,4 @@ end
 
 
 
-# Mesh_test()
+#Mesh_test()

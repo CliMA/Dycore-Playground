@@ -7,7 +7,7 @@ import PyPlot
 
 function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz::Int64=32)
     
-    Np = 4
+    Np = 3
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
     topology_type = "AtmoGCM"
@@ -30,7 +30,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     num_state_prognostic = 4
     
     app = DryEuler("no-penetration", nothing, "no-penetration", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity)
-    update_sponge_params!(app, -1.0, R-r, (R-r)*1/2.0)
+    update_sponge_params!(app, -1.0, R-r, (R-r)*1/2.0, [0.0,0.0])
 
     params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.4, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
     solver = Solver(app, mesh, params)
