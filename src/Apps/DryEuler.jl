@@ -30,6 +30,8 @@ mutable struct DryEuler <: Application
     Δt::Float64
     zT::Float64
     zD::Float64
+    xT::Float64
+    xD::Float64
     u_sponge::Array{Float64,1}
     
 end
@@ -58,7 +60,7 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     Rd = 287.058
     MSLP = 1.01325e5
     
-    Δt, zT, zD, u_sponge = -1.0, -1.0, -1.0, [0.0, 0.0]
+    Δt, zT, zD, xT, xD, u_sponge = -1.0, -1.0, Inf64, -1.0, Inf64, [0.0, 0.0]
     
     
     DryEuler(num_state_prognostic, num_state_diagnostic, num_state_auxiliary,
@@ -68,11 +70,15 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     bc_right_type, bc_right_data,
     use_ref_state,
     g, γ, Rd, MSLP,
-    Δt, zT, zD, u_sponge)
+    Δt, zT, zD, 
+    xT, xD, u_sponge)
+
 end
 
-function update_sponge_params!(app::DryEuler, Δt::Float64=app.Δt, zT::Float64=app.zT, zD::Float64=app.zD, u_sponge::Array{Float64,1}=app.u_sponge)
+function update_sponge_params!(app::DryEuler, Δt::Float64=app.Δt, zT::Float64=app.zT, zD::Float64=app.zD, 
+                               xT::Float64=app.xT, xD::Float64=app.xD, u_sponge::Array{Float64,1}=app.u_sponge)
     app.Δt, app.zT, app.zD, app.u_sponge = Δt, zT, zD, u_sponge
+    app.xT, app.xD = xT, xD
 end
 
 
@@ -316,7 +322,36 @@ function wall_flux_first_order(app::DryEuler,
 end
 
 
-function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
+# function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
+#     ρ = state_prognostic[1]
+#     ρ_ref = state_auxiliary[5]
+    
+    
+#     ∇Φ = state_auxiliary[2:3]
+    
+    
+#     # test
+#     # ρ_ref = 0.0
+#     source = [0.0; -(ρ - ρ_ref)*∇Φ ; 0.0]
+    
+    
+#     # sponge layer
+#     g = app.g
+#     z = state_auxiliary[1]/g
+#     Δt, zT, zD = app.Δt, app.zT, app.zD
+#     ρ, ρu = state_prognostic[1], state_prognostic[2:3]
+#     α = 1.0/(20Δt)
+#     β = (z <= zD ? 0 : α*sin(π/2.0 * ((z - zD)/(zT - zD)))^2)
+    
+
+#     source[2:3] .-= β*(ρu - ρ*app.u_sponge)
+    
+#     return source
+# end
+
+
+
+function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1}, x::Float64)
     ρ = state_prognostic[1]
     ρ_ref = state_auxiliary[5]
     
@@ -332,17 +367,22 @@ function source(app::DryEuler, state_prognostic::Array{Float64, 1}, state_auxili
     # sponge layer
     g = app.g
     z = state_auxiliary[1]/g
-    Δt, zT, zD = app.Δt, app.zT, app.zD
+    Δt, zT, zD, xT, xD = app.Δt, app.zT, app.zD, app.xT, app.xD
     ρ, ρu = state_prognostic[1], state_prognostic[2:3]
     α = 1.0/(20Δt)
-    β = (z <= zD ? 0 : α*sin(π/2.0 * ((z - zD)/(zT - zD)))^2)
-    
+
+    β = 0.0
+    if z > zD 
+        β =  α*sin(π/2.0 * ((z - zD)/(zT - zD)))^2
+    end
+    if abs(x) > xD
+        β = max(β, α*sin(π/2.0 * ((abs(x) - xD)/(xT - xD)))^2)
+    end
 
     source[2:3] .-= β*(ρu - ρ*app.u_sponge)
     
     return source
 end
-
 
 # The auxiliary state has Φ and ∇Φ
 function init_state_auxiliary!(app::DryEuler, mesh::Mesh, 

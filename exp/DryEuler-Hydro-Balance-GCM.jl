@@ -30,8 +30,8 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     num_state_prognostic = 4
     
     app = DryEuler("no-penetration", nothing, "no-penetration", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity)
-    update_sponge_params!(app, -1.0, R-r, (R-r)*1/2.0, [0.0,0.0])
-
+    update_sponge_params!(app, -1.0, R-r, (R-r)*1/2.0, Inf64, Inf64, [0.0,0.0])
+    
     params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.4, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
     solver = Solver(app, mesh, params)
     
@@ -126,11 +126,11 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
 end
 
-t_end =  5000.0# 86400.0 
+t_end =  86400.0 
 Nz = 32
 hydrostatic_balance("FV",    t_end,  Nz)
 # hydrostatic_balance("WENO3", t_end,  Nz)
-# hydrostatic_balance("WENO5", t_end,  Nz)
+hydrostatic_balance("WENO5", t_end,  Nz)
 
 
 

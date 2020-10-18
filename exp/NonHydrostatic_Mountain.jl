@@ -22,7 +22,7 @@ function init_agnesi_hs_lin(z::Float64)
     c2::Float64 = R_gas / c_p
 
     # Define initial thermal field as isothermal
-    Tiso::Float64 = 300.0
+    Tiso::Float64 = 280.0
     θ0::Float64 = Tiso
 
     # Assign a value to the Brunt-Vaisala frquencey:
@@ -68,8 +68,8 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
     
     
-    Nx = 288
-    Lx, Lz =  144.0e3, 30.0e3 # 144.0e3, 30.0e3
+    Nx = 50
+    Lx, Lz =  50.0e3, 21.0e3 # 144.0e3, 30.0e3
     
     
     topology_size = [Lx; Lz]
@@ -80,14 +80,14 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     gravity = true
     
     
-    u_init = [10.0;0.0]
+    
     
     num_state_prognostic = 4
-    
+    u_init = [10.0;0.0]
     app = DryEuler("no-penetration", nothing, "no-penetration", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity)
-    update_sponge_params!(app, -1.0, Lz, 15e3, u_init)
+    update_sponge_params!(app, -1.0, Lz, 10e3, Lx/2.0, 15e3, u_init)
         
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.5, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 1.0, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
     solver = Solver(app, mesh, params)
     
     
@@ -169,10 +169,10 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
 end
 
-t_end = 18000.0 #86400.0 / 2.0
-Nz = 600
-hydrostatic_balance("FV",    t_end,  Nz)
+t_end = 3600.0 #86400.0 / 2.0
+Nz = 100
+# hydrostatic_balance("FV",    t_end,  Nz)
 # hydrostatic_balance("WENO3", t_end,  Nz)
-# hydrostatic_balance("WENO5", t_end,  Nz)
+hydrostatic_balance("WENO5", t_end,  Nz)
 
 

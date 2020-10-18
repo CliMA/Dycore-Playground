@@ -266,7 +266,7 @@ function source_tendency!(
                 x, z, M = vol_l_geo[:, il, e]
                 
                 
-                tendency[il, :, e] += source(app, local_states_l[il, :], local_aux_l[il, :]) * M 
+                tendency[il, :, e] += source(app, local_states_l[il, :], local_aux_l[il, :], x) * M 
             end
         end
         
