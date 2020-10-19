@@ -17,7 +17,7 @@ mutable struct DryEuler <: Application
     bc_right_type::String
     bc_right_data::Union{Array{Float64, 1}, Nothing}
     
-    use_ref_state::Bool
+    hydrostatic_balance::Bool
     
     
     
@@ -40,7 +40,7 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     bc_top_type::String,     bc_top_data::Union{Array{Float64, 1}, Nothing},
     bc_left_type::String,    bc_left_data::Union{Array{Float64, 1}, Nothing},
     bc_right_type::String,   bc_right_data::Union{Array{Float64, 1}, Nothing},
-    gravity::Bool)
+    gravity::Bool, hydrostatic_balance::Bool)
     
     num_state_prognostic = 4
     num_state_diagnostic = 4
@@ -50,10 +50,10 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     # constant
     if gravity == false
         g = 0.0
-        use_ref_state = false
+        @assert(hydrostatic_balance == false)
+        hydrostatic_balance = false
     else
         g = 9.8
-        use_ref_state = true
     end
     
     γ = 1.4
@@ -68,7 +68,7 @@ function DryEuler(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 
     bc_top_type, bc_top_data,
     bc_left_type, bc_left_data,
     bc_right_type, bc_right_data,
-    use_ref_state,
+    hydrostatic_balance,
     g, γ, Rd, MSLP,
     Δt, zT, zD, 
     xT, xD, u_sponge)
@@ -457,52 +457,6 @@ function init_state_auxiliary!(app::DryEuler, mesh::Mesh,
 end
 
 
-# function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Array{Float64, 3},
-#     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
-#     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
-
-#     if !app.use_ref_state;  return;   end
-#     # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
-#     p_aux_id , ρ_aux_id = 4 , 5
-#     Nx, Nz, Δzc = mesh.Nx, mesh.Nz, mesh.Δzc
-#     ϕl_q = mesh.ϕl_q
-#     g =  app.g
-#     Nl, num_state_auxiliary, nelem = size(state_auxiliary_vol_l)
-
-#     state_auxiliary_vol_l[:, ρ_aux_id, :] .= state_primitive[:, 1, :]
-
-#     for iz = 1:Nz
-#         for ix = 1:Nx
-#             e  = ix + (iz-1)*Nx
-#             e⁻ = ix + (iz-2)*Nx
-#             for il = 1:Nl
-
-
-#                 Δz = Δzc[il, ix, iz]
-#                 ρ, p = state_primitive[il, 1, e], state_primitive[il, 4, e]
-
-#                 if e⁻ > 0
-#                     state_auxiliary_surf_v[il,  p_aux_id, 1, e] = state_auxiliary_surf_v[il,  p_aux_id, 2, e⁻]
-#                 else # on the ground
-#                     state_auxiliary_surf_v[il,  p_aux_id, 1, e] = p + ρ*g*Δz/2.0
-#                 end
-
-#                 state_auxiliary_surf_v[il,  p_aux_id, 2, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz
-#                 state_auxiliary_vol_l[il, p_aux_id, e] = state_auxiliary_surf_v[il,  p_aux_id, 1, e] - ρ*g*Δz/2.0
-
-#                 if il == 1
-#                     state_auxiliary_surf_h[1,  p_aux_id, 1, e] = state_auxiliary_vol_l[il, p_aux_id, e]
-#                 elseif il == Nl
-#                     state_auxiliary_surf_h[1,  p_aux_id, 2, e] = state_auxiliary_vol_l[il, p_aux_id, e]
-#                 end
-
-
-#             end
-
-#             state_auxiliary_vol_q[:, p_aux_id, e] .= ϕl_q * state_auxiliary_vol_l[:, p_aux_id, e]
-#         end
-#     end
-# end
 
 
 
@@ -511,7 +465,7 @@ function update_state_auxiliary!(app::DryEuler, mesh::Mesh, state_primitive::Arr
     state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
     state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
     
-    if !app.use_ref_state;  return;   end
+    error("Should not be called!")
     # update state_auxiliary[4] p_ref  ,  state_auxiliary_vol_l[5] ρ_ref
     p_aux_id , ρ_aux_id = 4 , 5
     Nx, Nz, Δzc = mesh.Nx, mesh.Nz, mesh.Δzc
