@@ -245,7 +245,7 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     
 
     @show "source_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
- 
+    
     
     M_lumped = @view mesh.vol_l_geo[3, :, :]
     for s = 1:app.num_state_prognostic

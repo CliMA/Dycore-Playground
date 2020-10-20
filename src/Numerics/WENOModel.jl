@@ -298,17 +298,17 @@ function reconstruction_1d_weno5(app::Application, state_primitive_col, Δzc_col
     num_left_stencil = 1
     state_primitive_weno, Δz_weno = zeros(num_state_prognostic, 2num_left_stencil+1), zeros(2num_left_stencil+1)
     for iz = [2, Nz-1]
+
+        for is = 1: 2num_left_stencil+1
+            state_primitive_weno[:, is] = state_primitive_col[:, (iz - num_left_stencil + is - 1)]
+            Δz_weno[is] =  Δzc_col[(iz - num_left_stencil + is - 1)]
+        end
         
         if app.hydrostatic_balance
             g = app.g
             ρ, p, Δz = state_primitive_col[1, iz],  state_primitive_col[4, iz],  Δzc_col[iz]
             # bottom face⁺ and top face⁻
             p_face⁺, p_face⁻ = p + ρ*Δz*g/2.0, p - ρ*Δz*g/2.0
-            
-            for is = 1: 2num_left_stencil+1
-                state_primitive_weno[:, is] = state_primitive_col[:, (iz - num_left_stencil + is - 1)]
-                Δz_weno[is] =  Δzc_col[(iz - num_left_stencil + is - 1)]
-            end
             
             
             # subtract the hydrostatic balance p_ref

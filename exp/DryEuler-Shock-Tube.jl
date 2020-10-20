@@ -28,7 +28,7 @@ function shock_tube(direction::String, vertical_method::String, Np::Int64=2, Nq:
     topology = topology_les(Nl, Nx, Nz, Lx, Lz)
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
     gravity = false
-
+    hydrostatic_balance = false
 
     # set initial condition 
     num_state_prognostic, nelem = 4, Nx*Nz
@@ -41,9 +41,9 @@ function shock_tube(direction::String, vertical_method::String, Np::Int64=2, Nq:
 
     
     if direction == "vertical"
-        app = DryEuler("no-slip", nothing, "outlet", prim_r,  "periodic", nothing, "periodic", nothing, gravity)
+        app = DryEuler("no-slip", nothing, "outlet", prim_r,  "periodic", nothing, "periodic", nothing, gravity, hydrostatic_balance)
     else direction == "horizontal"
-        app = DryEuler("periodic", nothing, "periodic", nothing, "no-slip", nothing, "no-slip", nothing,  gravity)
+        app = DryEuler("periodic", nothing, "periodic", nothing, "no-slip", nothing, "no-slip", nothing,  gravity, hydrostatic_balance)
     end
     
 

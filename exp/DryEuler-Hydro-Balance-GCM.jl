@@ -23,13 +23,13 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     topology = topology_gcm(Nl, Nx, Nz, r, R)
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
     gravity = true
-    
+    hydrostatic_balance = true
     
     
     
     num_state_prognostic = 4
     
-    app = DryEuler("no-penetration", nothing, "no-penetration", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity)
+    app = DryEuler("no-penetration", nothing, "no-penetration", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity, hydrostatic_balance)
     update_sponge_params!(app, -1.0, R-r, (R-r)*1/2.0, Inf64, Inf64, [0.0,0.0])
     
     params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.4, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)

@@ -90,10 +90,10 @@ function adv_square(test_case::String, vertical_method::String, t_end::Float64=3
 end
 
 period = 1
-
+adv_square("square", "FV",    3.0*period)
 adv_square("square", "WENO3", 3.0*period)
 adv_square("square", "WENO5", 3.0*period)
-adv_square("square", "FV",    3.0*period)
+
 
 adv_square("gaussian", "WENO3", 3.0*period)
 adv_square("gaussian", "WENO5", 3.0*period)
