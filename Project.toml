@@ -1,0 +1,4 @@
+[deps]
+GaussQuadrature = "d54b0c1a-921d-58e0-8e36-89d8069c0969"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
