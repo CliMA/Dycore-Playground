@@ -318,14 +318,6 @@ function vertical_interface_tendency!(
             state_primitive_face⁻, state_primitive_face⁺)
             
             
-            
-            
-            
-            
-            
-            
-            
-            
             for iz = 1:Nz+1
                 e⁺ =  ix + (iz-1)*Nx
                 loc_aux = (iz == Nz+1 ? state_auxiliary_surf_v[il, :,  end, ix + (iz-2)*Nx] : state_auxiliary_surf_v[il, :,  1, e⁺])
@@ -334,11 +326,8 @@ function vertical_interface_tendency!(
             end
             
             
-            
-            
             ##########################################################################################################
             # compute face flux 
-            
             
             
             # loop face 
@@ -416,22 +405,20 @@ function vertical_interface_tendency!(
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
                     tendency[il, :,  e⁺]  .+=  sM * local_flux
                     
-                    # if iz == 2
-                    #     @info state_primitive_face⁻[:,2], state_primitive_face⁺[:,2], local_aux⁻, local_aux⁺
-                    #     @show state_prognostic_face⁻[:, iz],  state_prognostic_face⁺[:, iz]
-                    #     @info iz, local_flux, sM * local_flux
-                    #     error("stop")
-                    # end
-                    
                     
                 end
             end 
-            
-            # @info tendency[il, :, ix:Nx:end]
-            # error("stop")
             
         end
     end
 end
 
 
+function vertical_gradients!(
+    app::Application,
+    mesh::Mesh,
+    state_prognostic::Array{Float64, 3},
+    state_auxiliary_vol_l::Array{Float64,3},
+    state_gradient_tendency::Array{Float64, 3}
+    ) 
+end

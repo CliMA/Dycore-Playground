@@ -304,3 +304,23 @@ function compute_cfl_dt(app::Application, mesh::Mesh, Q::Array{Float64,3}, Q_aux
 end
 
 
+"""
+This function compute gradients at volume nodal points(assume these derivatives are constant in η direction) 
+for second order equations 
+
+For advection equation:
+  ∂a/∂x, ∂a/∂z
+For Navierstokes equation:
+  ∂u/∂x, ∂u/∂z
+  ∂w/∂x, ∂w/∂z
+  ∂h/∂x, ∂h/∂z
+This function will compute ∂Y/∂ξ by DG in DGModel with 
+    volume_gradient_tendency!
+    horizontal_interface_tendency!
+and compute ∂Y/∂η by FD in FVModel with 
+    vertical_gradient!
+
+Save them in auxiliary variables?
+"""
+function compute_gradients()
+end
