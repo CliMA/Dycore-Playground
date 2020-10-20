@@ -4,22 +4,78 @@ include("../src/Numerics/Solver.jl")
 
 import PyPlot
 
+function init_agnesi_hs_lin(z::Float64)
+    # Problem float-type
+    gas_constant() =     8.3144598
+    molmass_dryair() = 28.97e-3
+    kappa_d()        = 2 / 7
+    # Unpack constant parameters
+    R_gas::Float64 = gas_constant() / molmass_dryair()
+    c_p::Float64 = R_gas / kappa_d()
+    c_v::Float64 = c_p - R_gas
+    p0::Float64 = 1.01325e5
+    _grav::Float64 = 9.8
+
+    γ::Float64 = c_p / c_v
+
+    c::Float64 = c_v / R_gas
+    c2::Float64 = R_gas / c_p
+
+    # Define initial thermal field as isothermal
+    Tiso::Float64 = 280.0
+    θ0::Float64 = Tiso
+
+    # Assign a value to the Brunt-Vaisala frquencey:
+    Brunt::Float64 = 0.01
+    Brunt2::Float64 = Brunt * Brunt
+    g2::Float64 = _grav * _grav
+
+    # π_exner = (p/p0)^{R/cp}
+    π_exner::Float64 = 1 + _grav^2/(c_p*θ0*Brunt2) * (exp(-Brunt2*z/_grav) - 1)
+    θ::Float64 = θ0 * exp(Brunt2 * z / _grav)
+    ρ::Float64 = p0 / (R_gas * θ) * (π_exner)^c
+    
+
+    # Compute perturbed thermodynamic state:
+    T = θ * π_exner
+    p = ρ * R_gas * T
+    
+    p_test = p0*π_exner^(c_p/R_gas)
+
+    # @info "same : ", p, p_test
+
+
+
+    # @info "same: ", ρ, p0/θ/R_gas*(p/p0)^(c_v/c_p)
+    # @info _grav^2, c_p, c_p*θ0*Brunt2, exp(-z*Brunt2/_grav)
+    # @info (1 + _grav^2/(c_p*θ0*Brunt2)*(exp(-z*Brunt2/_grav) - 1))
+    # @info "pp:", p, p0*(1 + _grav^2/(c_p*θ0*Brunt2)*(exp(-z*Brunt2/_grav) - 1))^(c_p/R_gas)
+
+    return p, ρ
+
+end
+
+
+
+
 
 function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz::Int64=32)
     
-    Np = 1
+    Np = 4
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
     topology_type = "AtmoLES"
     
     
     
-    Nx = 1
-    Lx, Lz = 2.0e3, 30.0e3
+    Nx = 50
+    Lx, Lz =  50.0e3, 21.0e3 # 144.0e3, 30.0e3
     
     
     topology_size = [Lx; Lz]
     topology = topology_les(Nl, Nx, Nz, Lx, Lz)
+    mountain_wrap_les!(Nl, Nx, Nz, Lx, Lz, topology)
+
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
     gravity = true
     hydrostatic_balance = true
@@ -27,48 +83,45 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
     
     num_state_prognostic = 4
-    
+    u_init = [10.0;0.0]
     app = DryEuler("no-penetration", nothing, "no-penetration", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, gravity, hydrostatic_balance)
-    update_sponge_params!(app, -1.0, Lz, Lz*1/2.0)
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
+    update_sponge_params!(app, -1.0, Lz, 10e3, Lx/2.0, 15e3, u_init)
+        
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 1.0, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
     solver = Solver(app, mesh, params)
     
     
-    # set initial condition 
     num_state_prognostic, nelem = app.num_state_prognostic, Nx*Nz
     
-    state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
     
-    T_virt_surf, T_min_ref, H_t = 280.0, 230.0, 9.0e3
-    profile = init_discrete_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
+
+    # set initial condition
+    state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
+    state_auxiliary_vol_l = solver.state_auxiliary_vol_l
+    
+    init_discrete_hydrostatic_balance!(app, mesh, state_prognostic_0, state_auxiliary_vol_l, init_agnesi_hs_lin, u_init)
     set_init_state!(solver, state_prognostic_0)
 
 
+ 
 
-    # update reference state
-    # T_virt_surf, T_min_ref, H_t =  290.0, 220.0, 8.0e3
-    # state_prognostic_ref = ones(Nl, num_state_prognostic, nelem)
-    # profile_ref = init_hydrostatic_balance!(app,  mesh,  state_prognostic_ref, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
-    # state_auxiliary_vol_l  =  solver.state_auxiliary_vol_l     
-    # state_auxiliary_vol_q  =  solver.state_auxiliary_vol_q   
-    # state_auxiliary_surf_h =  solver.state_auxiliary_surf_h   
-    # state_auxiliary_surf_v =  solver.state_auxiliary_surf_v
-    # state_primitive_ref = similar(state_prognostic_ref)
-    # prog_to_prim!(app, state_prognostic_ref, solver.state_auxiliary_vol_l, state_primitive_ref)
-    # update_state_auxiliary!(app, mesh, state_primitive_ref, state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
+    # visualize
+    visual(mesh, state_prognostic_0[:,1,:], "NonHydrostatic_Balance_Mountain_init_"*vertical_method*".png")
 
-
-
-    # visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_init_"*vertical_method*".png")
-
+    # solve
     Q = solve!(solver)
-
+    
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive)
     ρ  = reshape(state_primitive[:, 1 ,:], (Nl * Nx, Nz))
     u  = reshape(state_primitive[:, 2 ,:], (Nl * Nx, Nz))
     w  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))
     p  = reshape(state_primitive[:, 4 ,:], (Nl * Nx, Nz))
+
+    visual(mesh, ρ, "NonHydrostatic_Balance_Mountain_rho_"*vertical_method*".png")
+    visual(mesh, u, "NonHydrostatic_Balance_Mountain_u_"*vertical_method*".png")
+    visual(mesh, w, "NonHydrostatic_Balance_Mountain_w_"*vertical_method*".png")
+    visual(mesh, p, "NonHydrostatic_Balance_Mountain_p_"*vertical_method*".png")
 
     state_primitive_0 = copy(solver.state_primitive)
     prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
@@ -93,7 +146,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     ax3.plot(p[nx_plot, :], zz, "-", fillstyle = "none", label = vertical_method)
     ax3.legend()
     ax3.set_xlabel("p")
-    fig.savefig("Hydrostatic_Balance"*vertical_method*"_x.png")
+    fig.savefig("NonHydrostatic_Balance_Mountain"*vertical_method*"_x.png")
 
 
 
@@ -112,12 +165,14 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     ax3.plot(xx, p[:, nz_plot], "-", fillstyle = "none", label = vertical_method)
     ax3.legend()
     ax3.set_ylabel("p")
-    fig.savefig("Hydrostatic_Balance"*vertical_method*"_z.png")
+    fig.savefig("NonHydrostatic_Balance_Mountain"*vertical_method*"_z.png")
     
 end
 
-t_end = 5000.0 #86400.0 
-Nz = 32
-hydrostatic_balance("FV",    t_end,  Nz)
-#hydrostatic_balance("WENO3", t_end,  Nz)
-#hydrostatic_balance("WENO5", t_end,  Nz)
+t_end = 3600.0 #86400.0 / 2.0
+Nz = 100
+# hydrostatic_balance("FV",    t_end,  Nz)
+# hydrostatic_balance("WENO3", t_end,  Nz)
+hydrostatic_balance("WENO5", t_end,  Nz)
+
+

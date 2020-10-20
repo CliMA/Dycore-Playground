@@ -71,6 +71,7 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     state_auxiliary_surf_v = zeros(Float64, Nl, num_state_auxiliary, nface, nelem)   # auxiliary states at vertical flux surface
     
     
+    
     init_state_auxiliary!(app, mesh, 
     state_auxiliary_vol_l, state_auxiliary_vol_q, 
     state_auxiliary_surf_h, state_auxiliary_surf_v)
@@ -124,6 +125,7 @@ function solve!(solver::Solver)
     cfl_dt0 = compute_cfl_dt(solver.app, solver.mesh, Q, Q_aux, cfl)
     
     dt = min(dt0, cfl_dt0)
+    update_sponge_params!(app, dt)
     
     @info "dt , dt0, cfl_dt0 = ", dt , dt0, cfl_dt0
     
@@ -134,17 +136,19 @@ function solve!(solver::Solver)
         ite += 1
         if cfl_freqency > 0 && ite%cfl_freqency == 0
             dt = compute_cfl_dt(solver.app, solver.mesh, Q, Q_aux, cfl)
+            update_sponge_params!(app, dt)
         end
         
         if dt + t > t_end
             dt = t_end - t
+            update_sponge_params!(app, dt)
         end
         
         # update solution in W for the next time step 
         time_advance!(solver, Q, dt)
         
         # apply filter
-        apply_filter(Q)
+        # apply_filter(Q)
         
         t += dt
         
@@ -228,51 +232,32 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
-    # update_state_auxiliary!(app, mesh, state_primitive , state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
+  
+    compute_min_max(app, state_primitive)
     
-    
-    
-    
-    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_l, state_auxiliary_vol_q, dQ)
-    #@show "horizontal_volume_tendency! ", norm(dQ)
-    
-    # @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
-    
+    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
+
     horizontal_interface_tendency!(app, mesh, Q, state_auxiliary_surf_h, dQ)
-    #@show "horizontal_interface_tendency! ", norm(dQ)
-    
-    # @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
-
-
+ 
     vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
-    #@show "vertical_interface_tendency! ", norm(dQ)
-    
-    # @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
-    
+  
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
     
-    # @info dQ[:, 3, :]
-    # @show "source_tendency! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
+
+    @show "source_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
     
-    
-    # error("stop")
     
     M_lumped = @view mesh.vol_l_geo[3, :, :]
     for s = 1:app.num_state_prognostic
         dQ[:,s,:] ./= M_lumped
     end
-
-
-    # @info dQ[:, 3, :]
-    @info Q[1,3,1], Q[1,3,1]/Q[1,1,1]
-    @show dQ[1, 3, 1]
-    @show "final! ", norm(dQ[:,1,:]), norm(dQ[:,2,:]), norm(dQ[:,3,:]), norm(dQ[:,4,:])
     
 end
 
 
 function apply_filter(Q::Array{Float64,3})
-
+    Q[:, 2, :] .= 0.0
+    Q[:, 3, :] .= 0.0
     return ;
 
     Nl, num_state_prognostic, nelem = size(Q)
@@ -295,7 +280,7 @@ end
 function compute_cfl_dt(app::Application, mesh::Mesh, Q::Array{Float64,3}, Q_aux::Array{Float64,3}, cfl::Float64)
     
     @assert(cfl >= 0.0)
-    
+    Np = mesh.Nl - 1
     Δs_min = mesh.Δs_min
     dim, Nl, nelem = size(Δs_min)
     
@@ -309,7 +294,7 @@ function compute_cfl_dt(app::Application, mesh::Mesh, Q::Array{Float64,3}, Q_aux
             
             
             
-            dt_h = min(dt_h, cfl * Δs_min[1, il, e]/u)
+            dt_h = min(dt_h, cfl/Np * Δs_min[1, il, e]/u)
             
             dt_v = min(dt_v, cfl * Δs_min[2, il, e]/u)
         end

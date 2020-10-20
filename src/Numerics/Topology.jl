@@ -48,8 +48,11 @@ function mountain_wrap_les!(Nl::Int64, Nx::Int64, Nz::Int64, Lx::Float64, Lz::Fl
     zb = zeros(Float64, (Nl - 1)*Nx + 1)
     xb = topology[1, :, 1]
 
-    h, a, λ = 2.0e3 , 5e3 , 4e3
+    h, a, λ = 2.5e2 , 5e3 , 4e3
     zb = h*exp.(-xb.^2/a^2) .* cos.(π*xb/λ).^2
+
+    # h, a = 1 , 1e3 
+    # zb = h*a*a/(xb.^2 .+ a^2)
 
     for ix = 1:(Nl - 1)*Nx + 1
         topology[2, ix, :] = zb[ix] .+ topology[2, ix, :]/ Lz *(Lz - zb[ix])
