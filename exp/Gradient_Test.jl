@@ -3,24 +3,30 @@ include("../src/Apps/Application.jl")
 include("../src/Numerics/Solver.jl")
 
 
+"""
+return f, ∂f/∂x, ∂f/∂z
+"""
+function sin_cos_func(x::Float64, z::Float64)
+    return sin(2*x*pi)*cos(4*z*pi), 2*pi*cos(2*x*pi)*cos(4*z*pi), -4*pi*sin(2*x*pi)*sin(4*z*pi)
+end
 
+function const_func(x::Float64, z::Float64)
+    return 1.0, 0.0, 0.0
+end
+
+function linear_func(x::Float64, z::Float64)
+    return x + 2*y, 1.0, 2.0
+end
 
 function gradient_test(test_type::String, Np::Int64=2, Nq::Int64=ceil(Int64, (3*Np + 1)/2))
     dim  = 2 
     Nl = Np+1
     
     if test_type == "AtmoLES"
-        """
-        return f, ∂f/∂x, ∂f/∂z
-        """
-        function init_func(x::Float64, z::Float64)
-            return sin(2*x*pi)*cos(4*z*pi), 2*pi*cos(2*x*pi)*cos(4*z*pi), -4*pi*sin(2*x*pi)*sin(4*z*pi)
-        end
+        
 
-
-        # function init_func(x::Float64, z::Float64)
-        #     return 1, 0, 0
-        # end
+        init_func = sin_cos_func
+        
         topology_type = "AtmoLES"
         Nx, Nz = 32,   32*Nl
         Lx, Lz = 1.0,  1.0
@@ -29,7 +35,21 @@ function gradient_test(test_type::String, Np::Int64=2, Nq::Int64=ceil(Int64, (3*
         topology_size = [Lx, Lz]
         topology = topology_les(Nl, Nx, Nz, Lx, Lz)
     elseif test_type == "AtmoGCM"
-    elseif test_type == "AtmoGCM"
+        
+
+        init_func = sin_cos_func
+
+
+        topology_type = "AtmoGCM"
+        Nx, Nz = 64,   64*Nl
+        r,  R  = 1.0,  2.0
+        
+        
+        topology_size = [r, R]
+        topology = topology_gcm(Nl, Nx, Nz, r, R)
+
+
+    elseif test_type == "AtmoLES-Mountain"
     else
         return
     end
@@ -67,15 +87,22 @@ function gradient_test(test_type::String, Np::Int64=2, Nq::Int64=ceil(Int64, (3*
     
     compute_gradients!(app, mesh, state_gradient, ∇ref_state_gradient, ∇state_gradient)
     
-    visual(mesh, ∇state_gradient_ref[:, 1, :, 1], "DuDx_ref.png")
-    visual(mesh, ∇state_gradient[:, 1, :, 1],     "DuDx.png")
+    vmin, vmax = -2π, 2π
+    visual(mesh, ∇state_gradient_ref[:, 1, :, 1], test_type*"DuDx_ref.png", vmin, vmax)
+    visual(mesh, ∇state_gradient[:, 1, :, 1],     test_type*"DuDx.png", vmin, vmax)
     
-    visual(mesh, ∇state_gradient_ref[:, 1, :, 2], "DuDy_ref.png")
-    visual(mesh, ∇state_gradient[:, 1, :, 2],     "DuDy.png")
+    vmin, vmax = -4π, 4π
+    visual(mesh, ∇state_gradient_ref[:, 1, :, 2], test_type*"DuDy_ref.png", vmin, vmax)
+    visual(mesh, ∇state_gradient[:, 1, :, 2],     test_type*"DuDy.png", vmin, vmax)
     
 end
 
 
 test_type = "AtmoLES"
 Np = 2
+gradient_test(test_type, Np)
+
+
+test_type = "AtmoGCM"
+Np = 3
 gradient_test(test_type, Np)

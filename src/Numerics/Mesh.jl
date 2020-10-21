@@ -666,7 +666,7 @@ end
 """
 state is a (Float64, Nl, nelem)
 """
-function visual(mesh::Mesh, state::Array{Float64, 2}, save_file_name::String="None")
+function visual(mesh::Mesh, state::Array{Float64, 2}, save_file_name::String="None", vmin = nothing, vmax=nothing)
     
     Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
     vol_l_geo = mesh.vol_l_geo
@@ -676,7 +676,7 @@ function visual(mesh::Mesh, state::Array{Float64, 2}, save_file_name::String="No
     
     data = reshape(state, (Nl * Nx, Nz))
     PyPlot.figure()
-    PyPlot.pcolormesh(x, z, data, shading = "gouraud", cmap = "jet")
+    PyPlot.pcolormesh(x, z, data, shading = "gouraud", cmap = "jet", vmin=vmin, vmax=vmax)
     PyPlot.colorbar()
     PyPlot.axis("equal")
     if save_file_name != "None"
