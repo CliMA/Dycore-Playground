@@ -216,8 +216,11 @@ function horizontal_volume_gradient_tendency!(
     Nq , Nl, Nx, Nz = mesh.Nq, mesh.Nl, mesh.Nx, mesh.Nz
     num_state_gradient = app.num_state_gradient
     ωq, ωl, ϕl_q, Dl_q = mesh.ωq, mesh.ωl, mesh.ϕl_q, mesh.Dl_q
+
+
     
-    Threads.@threads for iz = 1:Nz
+    # Threads.@threads for iz = 1:Nz
+    for iz = 1:Nz
         
         # reconstructed local state at quadrature points
         local_states_q = zeros(Float64, Nq, num_state_gradient)
@@ -238,10 +241,11 @@ function horizontal_volume_gradient_tendency!(
             for il = 1:Nl
                 for iq = 1:Nq
                     # ∂/∂ξ
-                    ∇ref_state_gradient[il, :, e, 1] .-= local_states_q[iq, :] *( Dl_q[iq, il] * ωq[iq])
+                    ∇ref_state_gradient[il, :, e, 1] .-= local_states_q[iq, :] *( Dl_q[iq, il] * ωq[iq] )
                 end
                 ∇ref_state_gradient[il, :, e, 1] ./= ωl[il]
             end
+
             
         end
         
@@ -266,7 +270,10 @@ function horizontal_interface_gradient_tendency!(
     Nx, Nz = mesh.Nx, mesh.Nz
     ωl = mesh.ωl
     
-    Threads.@threads for iz = 1:Nz
+
+    # Threads.@threads for iz = 1:Nz
+    for iz = 1:Nz
+        
         # Compute the flux on the ix-th face
         for ix = 1:Nx+1
             
@@ -279,8 +286,9 @@ function horizontal_interface_gradient_tendency!(
             
             # central flux 
             local_flux = (local_state⁻ + local_state⁺)/2.0
-            ∇ref_state_gradient[1,   :, e⁺, 1] .+= local_flux / ωl[1]
-            ∇ref_state_gradient[end, :, e⁻, 1] .-= local_flux / ωl[end]
+            ∇ref_state_gradient[1,   :, e⁺, 1] .-= local_flux / ωl[1]
+            ∇ref_state_gradient[end, :, e⁻, 1] .+= local_flux / ωl[end]
+
         end
     end
 end

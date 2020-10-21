@@ -325,8 +325,9 @@ function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{
     vol_l_geo = mesh.vol_l_geo
     ∇ref_state_gradient .= 0.0
 
-    horizontal_interface_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient)  
-    horizontal_volume_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient)  
+      
+    horizontal_volume_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient) 
+    horizontal_interface_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient) 
     vertical_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient)  
 
     for iz = 1:Nz
@@ -341,4 +342,5 @@ function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{
             end
         end
     end
+
 end

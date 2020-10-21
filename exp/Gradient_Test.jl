@@ -16,6 +16,11 @@ function gradient_test(test_type::String, Np::Int64=2, Nq::Int64=ceil(Int64, (3*
         function init_func(x::Float64, z::Float64)
             return sin(2*x*pi)*cos(4*z*pi), 2*pi*cos(2*x*pi)*cos(4*z*pi), -4*pi*sin(2*x*pi)*sin(4*z*pi)
         end
+
+
+        # function init_func(x::Float64, z::Float64)
+        #     return 1, 0, 0
+        # end
         topology_type = "AtmoLES"
         Nx, Nz = 32,   32*Nl
         Lx, Lz = 1.0,  1.0
@@ -72,5 +77,5 @@ end
 
 
 test_type = "AtmoLES"
-Np = 4
+Np = 2
 gradient_test(test_type, Np)
