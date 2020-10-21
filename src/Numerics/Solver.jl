@@ -19,8 +19,10 @@ mutable struct Solver
     # diagnostic variables 
     state_diagnostic::Array{Float64,3}   # primitive variables
     
-    
-    
+    state_gradient::Array{Float64,3}       # variables need to take derivatives
+    ∇ref_state_gradient::Array{Float64,4}  # ∇_{ξ, η} state_gradient
+    ∇state_gradient::Array{Float64,4}      # ∇_{x, z} state_gradient
+
     # auxiliary variables 
     # size = （Nl, num_state, nelem) 
     state_auxiliary_vol_l::Array{Float64,3}    # auxiliary states at volume Gauss-Legendre-Lobatto points
@@ -52,8 +54,9 @@ end
 function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     
     Nx, Nz, Nl, Nq = mesh.Nx,  mesh.Nz,  mesh.Nl, mesh.Nq
-    num_state_prognostic, num_state_diagnostic, num_state_auxiliary = app.num_state_prognostic, app.num_state_diagnostic, app.num_state_auxiliary
+    num_state_prognostic, num_state_diagnostic, num_state_auxiliary, num_state_gradient = app.num_state_prognostic, app.num_state_diagnostic, app.num_state_auxiliary, app.num_state_gradient
     nelem = Nx * Nz
+    dim = 2
     
     state_prognostic = zeros(Float64, Nl, num_state_prognostic, nelem)
     Q1 = zeros(Float64, Nl, num_state_prognostic, nelem)
@@ -62,6 +65,11 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     state_primitive  = zeros(Float64, Nl, num_state_prognostic, nelem)
     
     state_diagnostic = zeros(Float64, Nl, num_state_diagnostic, nelem)
+
+
+    state_gradient      = zeros(Float64, Nl, num_state_gradient, nelem)
+    ∇ref_state_gradient = zeros(Float64, Nl, num_state_gradient, nelem, dim)
+    ∇state_gradient     = zeros(Float64, Nl, num_state_gradient, nelem, dim)
     
     
     state_auxiliary_vol_l = zeros(Float64, Nl, num_state_auxiliary, nelem)    # auxiliary states at volume Gauss-Legendre-Lobatto points
@@ -95,6 +103,7 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     state_prognostic, Q1, 
     state_primitive, 
     state_diagnostic,
+    state_gradient, ∇ref_state_gradient, ∇state_gradient,  
     state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v,
     tendency, k1, k2, k3, k4, 
     time_integrator, cfl_freqency, cfl, dt0, t_end, 
@@ -232,12 +241,18 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
-  
     compute_min_max(app, state_primitive)
-    
-    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
 
-    horizontal_interface_tendency!(app, mesh, Q, state_auxiliary_surf_h, dQ)
+
+    state_gradient, ∇ref_state_gradient, ∇state_gradient = solver.state_gradient, solver.∇ref_state_gradient, solver.∇state_gradient
+    if app.num_state_gradient > 0
+        compute_gradient_variables!(app, Q, state_primitive, state_auxiliary_vol_l, state_gradient)
+        compute_gradients!(app, mesh, state_gradient, ∇ref_state_gradient, ∇state_gradient)
+    end
+    
+    horizontal_volume_tendency!(app, mesh, Q, ∇state_gradient, state_auxiliary_vol_q, dQ)
+
+    horizontal_interface_tendency!(app, mesh, Q, ∇state_gradient, state_auxiliary_surf_h, dQ)
  
     vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
   
@@ -344,3 +359,5 @@ function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{
     end
 
 end
+
+

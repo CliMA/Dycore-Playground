@@ -94,7 +94,6 @@ function prog_to_prim!(app::Adv, state_prognostic::Array{Float64, 3}, state_auxi
 end
 
 
-
 function flux_first_order(app::Adv, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     
     return [state_prognostic*app.u  state_prognostic*app.w]
