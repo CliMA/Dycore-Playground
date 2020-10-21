@@ -256,10 +256,7 @@ end
 
 
 function apply_filter(Q::Array{Float64,3})
-    Q[:, 2, :] .= 0.0
-    Q[:, 3, :] .= 0.0
-    return ;
-
+    
     Nl, num_state_prognostic, nelem = size(Q)
     
     Np = Nl - 1
@@ -322,5 +319,24 @@ and compute ∂Y/∂η by FD in FVModel with
 
 Save them in auxiliary variables?
 """
-function compute_gradients()
+function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{Float64, 3}, ∇ref_state_gradient::Array{Float64, 4}, ∇state_gradient::Array{Float64, 4})
+
+    Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
+    vol_l_geo = mesh.vol_l_geo
+    ∇ref_state_gradient .= 0.0
+
+    horizontal_interface_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient)  
+    horizontal_volume_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient)  
+    vertical_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient)  
+
+    for iz = 1:Nz
+        for ix = 1:Nx
+            e = ix + (iz - 1)*Nx
+            for il = 1:Nl
+                ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z = vol_l_geo[2:5, il, e]
+                ∇state_gradient[il, :, e, 1] .=  ∇ref_state_gradient[il, :, e, 1] * ∂ξ∂x + ∇ref_state_gradient[il, :, e, 2] * ∂η∂x
+                ∇state_gradient[il, :, e, 2] .=  ∇ref_state_gradient[il, :, e, 1] * ∂ξ∂z + ∇ref_state_gradient[il, :, e, 2] * ∂η∂z
+            end
+        end
+    end
 end

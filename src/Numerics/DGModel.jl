@@ -61,81 +61,6 @@ function horizontal_volume_tendency!(
 end
 
 
-
-function horizontal_volume_tendency!(
-    app::Application,
-    mesh::Mesh,
-    state_prognostic::Array{Float64, 3},
-    state_auxiliary_vol_l::Array{Float64,3},
-    state_auxiliary_vol_q::Array{Float64,3},
-    tendency::Array{Float64, 3},
-    )
-    
-    # Each element has Nl Gauss-Legendre-Lobatto points(basis), 
-    # and Nq quadrature points
-    
-    Nq , Nl, Nx, Nz = mesh.Nq, mesh.Nl, mesh.Nx, mesh.Nz
-    num_state_prognostic = app.num_state_prognostic
-    dim, vol_q_geo, ϕl_q, Dl_q = mesh.dim, mesh.vol_q_geo, mesh.ϕl_q, mesh.Dl_q
-    
-    
-    
-    
-    p_state_id, p_aux_id = 4, 4
-    
-    Threads.@threads for iz = 1:Nz
-
-        # reconstructed local state at quadrature points
-    local_states_q = zeros(Float64, Nq, num_state_prognostic)
-    local_fluxes_q = zeros(Float64, Nq, num_state_prognostic, dim)
-    local_states_prim_q = zeros(Float64, Nq, num_state_prognostic)
-    local_states_prim_l = zeros(Float64, Nl, num_state_prognostic)
-    
-    local_flux = zeros(Float64, num_state_prognostic)
-
-    
-        for ix = 1:Nx
-            e = ix + (iz-1)*Nx
-            
-            local_states_l = @view state_prognostic[:, :, e]
-            local_aux_l    = @view state_auxiliary_vol_l[:, :, e]
-            local_aux_q    = @view state_auxiliary_vol_q[:, :, e]
-            
-            for il = 1:Nl
-                local_states_prim_l[il, :] = prog_to_prim(app, local_states_l[il, :], local_aux_l[il, :])
-            end
-            
-            for s = 1:num_state_prognostic
-                if s == p_state_id
-                    local_states_prim_q[:, s] =  ϕl_q * (local_states_prim_l[:, s] - local_aux_l[:, p_aux_id]) + local_aux_q[:, p_aux_id]
-                else
-                    local_states_prim_q[:, s] =  ϕl_q * local_states_prim_l[:, s]
-                end
-            end
-            
-            for iq = 1:Nq
-                local_states_q[iq, :] = prim_to_prog(app, local_states_prim_q[iq, :], local_aux_q[iq, :])
-            end
-            
-            for iq = 1:Nq
-                local_fluxes_q[iq, :, :] = flux_first_order(app, local_states_q[iq, :], local_aux_q[iq, :])
-            end
-            
-            # Loop Legendre-Gauss-Lobatto points to construct ∇ϕ_j = ∇_ξϕ_j J⁻¹
-            for iq = 1:Nq
-                M, ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z = vol_q_geo[:, iq, e]
-                for il = 1:Nl
-                    
-                    tendency[il, :, e] .+= local_fluxes_q[iq, :, :] *( M * Dl_q[iq, il] * [∂ξ∂x ; ∂ξ∂z])
-                end
-            end
-            
-        end
-        
-    end
-end
-
-
 @doc """
 interface_tendency!(balance_law::BalanceLaw, Val(polyorder),
 numerical_flux_first_order,
@@ -278,23 +203,85 @@ end
 
 
 """
-This function should compute 
+This function should compute the volume integral of ∂Y/∂ξ
+    ∫-Y ∂ψ/∂ξ
 """
-function volume_gradient_tendency!(
+function horizontal_volume_gradient_tendency!(
     app::Application,
     mesh::Mesh,
-    state_prognostic::Array{Float64, 3},
-    state_auxiliary_vol_l::Array{Float64,3},
-    state_gradient_tendency::Array{Float64, 3}
+    state_gradient::Array{Float64, 3},
+    ∇ref_state_gradient::Array{Float64, 3}
     )   
+    
+    Nq , Nl, Nx, Nz = mesh.Nq, mesh.Nl, mesh.Nx, mesh.Nz
+    num_state_gradient = app.num_state_gradient
+    ωq, ωl = mesh.ωq, mesh.ωl
+    
+    Threads.@threads for iz = 1:Nz
+        
+        # reconstructed local state at quadrature points
+        local_states_q = zeros(Float64, Nq, num_state_gradient)
+        
+        for ix = 1:Nx
+            e = ix + (iz-1)*Nx
+            # Nl × Ns
+            local_states_l = @view state_gradient[:, :, e]
+            
+            
+            for s = 1:num_state_prognostic
+                local_states_q[:, s] =  ϕl_q * local_states_l[:, s]
+            end
+            
+            
+            # Loop Legendre-Gauss-Lobatto points to construct ∇ϕ_j = ∇_ξϕ_j J⁻¹
+            
+            for il = 1:Nl
+                for iq = 1:Nq
+                    # ∂/∂ξ
+                    ∇ref_state_gradient[il, :, e, 1] .-= local_states_q[iq, :] *( Dl_q[iq, il] * ωq[iq])
+                end
+                ∇ref_state_gradient[il, :, e, 1] ./= ωl[il]
+            end
+            
+        end
+        
+    end
+    
 end
 
-function horizontal_interface_tendency!(
+
+
+"""
+This function should compute the horizontal integral of Y ψ N
+    ∫ Y (ψ, ψ) N 
+"""
+function horizontal_interface_gradient_tendency!(
     app::Application,
     mesh::Mesh,
-    state_prognostic::Array{Float64, 3},
-    state_auxiliary_vol_l::Array{Float64,3},
-    state_gradient_tendency::Array{Float64, 3}
-    ) 
+    state_gradient::Array{Float64, 3},
+    ∇ref_state_gradient::Array{Float64, 3}
+    )  
+    @assert(app.bc_left_type == "periodic" && app.bc_right_type == "periodic")
+    
+    Nx, Nz = mesh.Nx, mesh.Nz
+    ωl = mesh.ωl
+    
+    Threads.@threads for iz = 1:Nz
+        # Compute the flux on the ix-th face
+        for ix = 1:Nx+1
+            
+            # left and right element in the periodic sense
+            e⁻ = mod1(ix - 1, Nx) + (iz-1)*Nx
+            e⁺ = mod1(ix, Nx) + (iz-1)*Nx
+            
+            local_state⁻ = state_gradient[end, :, e⁻]
+            local_state⁺ = state_gradient[1,   :, e⁺]
+            
+            # central flux 
+            local_flux = (local_state⁻ + local_state⁺)/2.0
+            ∇ref_state_gradient[1,   :, e⁺, 1] .+= local_flux / ωl[1]
+            ∇ref_state_gradient[end, :, e⁻, 1] .-= local_flux / ωl[end]
+        end
+    end
 end
 

@@ -414,11 +414,106 @@ function vertical_interface_tendency!(
 end
 
 
-function vertical_gradients!(
+"""
+This function compute ∂Y/∂η
+This function must be called after 
+    horizontal_interface_gradient_tendency!(
+"""
+function vertical_gradient_tendency!(
     app::Application,
     mesh::Mesh,
-    state_prognostic::Array{Float64, 3},
-    state_auxiliary_vol_l::Array{Float64,3},
-    state_gradient_tendency::Array{Float64, 3}
-    ) 
+    state_gradient::Array{Float64, 3},
+    ∇ref_state_gradient::Array{Float64, 3}
+    )  
+    
+    
+    Threads.@threads for ix = 1:Nx
+        state_gradient_face = zeros(Float64, num_state_gradient, Nz+1)
+        for il = 1:Nl
+            # single colume treatment  
+            ##########
+            #  reconstruct interface states by looping each cell, construct the bottom and top states
+            id_col = ix:Nx:Nz*Nx
+            Δzc_col = @view mesh.Δzc[il, ix, :]
+            state_gradient_col = @view state_gradient[il, : , id_col]
+        
+            for iz = 1:Nz+1
+                # bottom 
+                if iz == 1
+                    if bc_bottom_type == "periodic"
+                        
+                        Δz⁻, Δz⁺ = Δzc_col[Nz], Δzc_col[1] 
+                        # interpolation to get face value at izth face, and 
+                        state_gradient_face[:,iz] .= (state_gradient_col[:,mod1(iz-1, Nz)]*Δz⁺ + state_gradient_col[:,mod1(iz, Nz)]*Δz⁻)/(Δz⁻ + Δz⁺)
+                    else
+                        error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
+                    end
+
+                    # top
+                elseif iz == Nz+1
+                    if bc_bottom_type == "periodic"
+                        
+                        Δz⁻, Δz⁺ = Δzc_col[Nz], Δzc_col[1] 
+                        # interpolation to get face value at izth face, and 
+                        state_gradient_face[:,iz] .= (state_gradient_col[:,mod1(iz-1, Nz)]*Δz⁺ + state_gradient_col[:,mod1(iz, Nz)]*Δz⁻)/(Δz⁻ + Δz⁺)
+                    else
+                        error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
+                    end
+
+                else
+                    
+                    Δz⁻, Δz⁺ = Δzc_col[iz-1], Δzc_col[iz] 
+                    # interpolation to get face value at izth face, and 
+                    state_gradient_face[:,iz] .= (state_gradient_col[:,mod1(iz-1, Nz)]*Δz⁺ + state_gradient_col[:,mod1(iz, Nz)]*Δz⁻)/(Δz⁻ + Δz⁺)
+                end
+                
+            end
+            
+            
+            ##########################################################################################################
+            # compute vertical gradient ∂Y/∂η flux 
+            
+            
+            # loop each element 
+            for iz = 1:Nz
+                
+                e = ix + (iz-1)*Nx
+                
+                # bottom 
+                if iz == 1
+                    if bc_bottom_type == "periodic"
+                        # use the auxiliary state in  local_aux⁺
+                        ∇ref_state_gradient[il, :, e, 2] = (state_gradient_face[:,iz+1] - state_gradient_face[:,iz])/2.0
+                    else
+                        error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
+                    end
+
+                    
+                    tendency[il, :,  e⁺]  .+=  sM * local_flux
+                    
+                    
+                    # top 
+                elseif iz == Nz
+                    if bc_top_type == "periodic"
+                        # use the auxiliary state in  local_aux⁻
+                        ∇ref_state_gradient[il, :, e, 2] = (state_gradient_face[:,iz+1] - state_gradient_face[:,iz])/2.0
+                        
+                    else
+                        error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
+                    end
+
+                    
+                    tendency[il, :,  e⁻]  .-=  sM * local_flux
+                    
+                else
+                    # todo we might need limiter there
+                    
+                    
+                    ∇ref_state_gradient[il, :, e, 2] = (state_gradient_face[:,iz+1] - state_gradient_face[:,iz])/2.0
+                    
+                end
+            end 
+            
+        end
+    end
 end
