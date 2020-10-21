@@ -243,10 +243,10 @@ function horizontal_volume_gradient_tendency!(
                     # ∂/∂ξ
                     ∇ref_state_gradient[il, :, e, 1] .-= local_states_q[iq, :] *( Dl_q[iq, il] * ωq[iq] )
                 end
-                ∇ref_state_gradient[il, :, e, 1] ./= ωl[il]
+                ∇ref_state_gradient[il, :, e, 1] ./= ωl[il]        
             end
 
-            
+                   
         end
         
     end
@@ -270,12 +270,12 @@ function horizontal_interface_gradient_tendency!(
     Nx, Nz = mesh.Nx, mesh.Nz
     ωl = mesh.ωl
     
-
+    
     # Threads.@threads for iz = 1:Nz
     for iz = 1:Nz
         
-        # Compute the flux on the ix-th face
-        for ix = 1:Nx+1
+        # Compute the flux on the ix-th face, !!! periodic condition so we have ix=1 and ix=Nx+1 are the same
+        for ix = 1:Nx
             
             # left and right element in the periodic sense
             e⁻ = mod1(ix - 1, Nx) + (iz-1)*Nx

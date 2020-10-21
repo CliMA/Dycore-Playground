@@ -15,7 +15,7 @@ function const_func(x::Float64, z::Float64)
 end
 
 function linear_func(x::Float64, z::Float64)
-    return x + 2*y, 1.0, 2.0
+    return x + 2*z, 1.0, 2.0
 end
 
 function gradient_test(test_type::String, Np::Int64=2, Nq::Int64=ceil(Int64, (3*Np + 1)/2))
