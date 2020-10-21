@@ -423,10 +423,14 @@ function vertical_gradient_tendency!(
     app::Application,
     mesh::Mesh,
     state_gradient::Array{Float64, 3},
-    ∇ref_state_gradient::Array{Float64, 3}
+    ∇ref_state_gradient::Array{Float64, 4}
     )  
     
-    
+    Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
+    num_state_gradient = app.num_state_gradient
+    bc_bottom_type, bc_top_type = app.bc_bottom_type, app.bc_top_type
+
+
     Threads.@threads for ix = 1:Nx
         state_gradient_face = zeros(Float64, num_state_gradient, Nz+1)
         for il = 1:Nl
@@ -489,9 +493,6 @@ function vertical_gradient_tendency!(
                     end
 
                     
-                    tendency[il, :,  e⁺]  .+=  sM * local_flux
-                    
-                    
                     # top 
                 elseif iz == Nz
                     if bc_top_type == "periodic"
@@ -501,10 +502,7 @@ function vertical_gradient_tendency!(
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
                     end
-
-                    
-                    tendency[il, :,  e⁻]  .-=  sM * local_flux
-                    
+      
                 else
                     # todo we might need limiter there
                     

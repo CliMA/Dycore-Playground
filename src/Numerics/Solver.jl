@@ -333,7 +333,9 @@ function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{
         for ix = 1:Nx
             e = ix + (iz - 1)*Nx
             for il = 1:Nl
-                ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z = vol_l_geo[2:5, il, e]
+
+
+                ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z = vol_l_geo[4:7, il, e]
                 ∇state_gradient[il, :, e, 1] .=  ∇ref_state_gradient[il, :, e, 1] * ∂ξ∂x + ∇ref_state_gradient[il, :, e, 2] * ∂η∂x
                 ∇state_gradient[il, :, e, 2] .=  ∇ref_state_gradient[il, :, e, 1] * ∂ξ∂z + ∇ref_state_gradient[il, :, e, 2] * ∂η∂z
             end

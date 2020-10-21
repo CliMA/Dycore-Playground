@@ -210,12 +210,12 @@ function horizontal_volume_gradient_tendency!(
     app::Application,
     mesh::Mesh,
     state_gradient::Array{Float64, 3},
-    ∇ref_state_gradient::Array{Float64, 3}
+    ∇ref_state_gradient::Array{Float64, 4}
     )   
     
     Nq , Nl, Nx, Nz = mesh.Nq, mesh.Nl, mesh.Nx, mesh.Nz
     num_state_gradient = app.num_state_gradient
-    ωq, ωl = mesh.ωq, mesh.ωl
+    ωq, ωl, ϕl_q, Dl_q = mesh.ωq, mesh.ωl, mesh.ϕl_q, mesh.Dl_q
     
     Threads.@threads for iz = 1:Nz
         
@@ -228,7 +228,7 @@ function horizontal_volume_gradient_tendency!(
             local_states_l = @view state_gradient[:, :, e]
             
             
-            for s = 1:num_state_prognostic
+            for s = 1:num_state_gradient
                 local_states_q[:, s] =  ϕl_q * local_states_l[:, s]
             end
             
@@ -259,7 +259,7 @@ function horizontal_interface_gradient_tendency!(
     app::Application,
     mesh::Mesh,
     state_gradient::Array{Float64, 3},
-    ∇ref_state_gradient::Array{Float64, 3}
+    ∇ref_state_gradient::Array{Float64, 4}
     )  
     @assert(app.bc_left_type == "periodic" && app.bc_right_type == "periodic")
     
