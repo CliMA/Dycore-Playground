@@ -42,8 +42,11 @@ function horizontal_volume_tendency!(
             local_∇states_l = @view ∇state_gradient[:, :, e, :]
             local_aux_q    = @view state_auxiliary_vol_q[:, :, e]
             
-            for s = 1:num_state_gradient
+            for s = 1:num_state_prognostic
                 local_states_q[:, s]  =  ϕl_q * local_states_l[:, s]
+            end
+
+            for s = 1:num_state_gradient
                 local_∇states_q[:, s, :] =  ϕl_q * local_∇states_l[:, s, :]
             end
             
@@ -62,7 +65,6 @@ function horizontal_volume_tendency!(
                     tendency[il, :, e] .+= local_fluxes_q[iq, :, :] *( M * Dl_q[iq, il] * [∂ξ∂x ; ∂ξ∂z])
                 end
             end
-            
         end
         
     end
