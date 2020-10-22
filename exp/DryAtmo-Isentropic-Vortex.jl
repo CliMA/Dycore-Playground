@@ -35,7 +35,7 @@ function isentropic_vortex(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(
     gravity, hydrostatic_balance)
     
     
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.5/Np, "dt0" => 0.02, "t_end" => 1.0000, "vertical_method" => vertical_method)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.5/Np, "dt0" => 0.02, "t_end" => 5.0000, "vertical_method" => vertical_method)
     
     solver = Solver(app, mesh, params)
     
@@ -70,12 +70,12 @@ function isentropic_vortex(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(
     set_init_state!(solver, state_prognostic_0)
     
 
-    # state_primitive_0 = similar(state_prognostic_0)
-    # prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
-    # visual(mesh, state_primitive_0[:,1,:], "Isentropic_Vortex_rho_init.png")
-    # visual(mesh, state_primitive_0[:,2,:], "Isentropic_Vortex_u_init.png")
-    # visual(mesh, state_primitive_0[:,3,:], "Isentropic_Vortex_v_init.png")
-    # visual(mesh, state_primitive_0[:,4,:], "Isentropic_Vortex_p_init.png")
+    state_primitive_0 = similar(state_prognostic_0)
+    prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
+    visual(mesh, state_primitive_0[:,1,:], "Isentropic_Vortex_rho_init.png")
+    visual(mesh, state_primitive_0[:,2,:], "Isentropic_Vortex_u_init.png")
+    visual(mesh, state_primitive_0[:,3,:], "Isentropic_Vortex_v_init.png")
+    visual(mesh, state_primitive_0[:,4,:], "Isentropic_Vortex_p_init.png")
     
     
     Q = solve!(solver)
