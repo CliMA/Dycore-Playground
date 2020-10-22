@@ -118,10 +118,15 @@ function flux_first_order(app::AdvDiff, state_prognostic::Array{Float64, 1}, sta
 end
 
 
-function flux_second_order(app::AdvDiff, state_prognostic::Array{Float64, 1}, state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
+function flux_second_order(app::AdvDiff, state_prognostic::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
     # this should be Array{Float64, 2}
-    return -app.ν*state_gradient
+    return -app.ν*∇state_gradient
 end
+
+function flux_second_order_prim(app::AdvDiff, state_primitive::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, local_aux::Array{Float64, 1})
+    # this should be Array{Float64, 2}
+    return -app.ν*∇state_gradient
+end           
 
 # Lax Friedrichs flux
 function numerical_flux_first_order(app::AdvDiff, state_prognostic⁻::Array{Float64, 1}, state_auxiliary⁻::Array{Float64, 1}, 

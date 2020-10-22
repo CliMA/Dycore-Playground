@@ -254,8 +254,13 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
 
     horizontal_interface_tendency!(app, mesh, Q, ∇state_gradient, state_auxiliary_surf_h, dQ)
  
-    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
+    vertical_interface_first_order_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
   
+    if app.num_state_gradient > 0
+        vertical_interface_second_order_tendency!(app, mesh, state_primitive, state_gradient, ∇state_gradient, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ)
+  
+    end
+
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
     
 
@@ -334,7 +339,8 @@ and compute ∂Y/∂η by FD in FVModel with
 
 Save them in auxiliary variables?
 """
-function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{Float64, 3}, ∇ref_state_gradient::Array{Float64, 4}, ∇state_gradient::Array{Float64, 4})
+function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{Float64, 3}, 
+    ∇ref_state_gradient::Array{Float64, 4}, ∇state_gradient::Array{Float64, 4})
 
     Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
     vol_l_geo = mesh.vol_l_geo
@@ -357,6 +363,9 @@ function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{
             end
         end
     end
+
+
+
 
 end
 
