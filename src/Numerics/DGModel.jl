@@ -236,8 +236,7 @@ function horizontal_volume_gradient_tendency!(
 
 
     
-    # Threads.@threads for iz = 1:Nz
-    for iz = 1:Nz
+    Threads.@threads for iz = 1:Nz
         
         # reconstructed local state at quadrature points
         local_states_q = zeros(Float64, Nq, num_state_gradient)
@@ -288,8 +287,7 @@ function horizontal_interface_gradient_tendency!(
     ωl = mesh.ωl
     
     
-    # Threads.@threads for iz = 1:Nz
-    for iz = 1:Nz
+    Threads.@threads for iz = 1:Nz
         
         # Compute the flux on the ix-th face, !!! periodic condition so we have ix=1 and ix=Nx+1 are the same
         for ix = 1:Nx

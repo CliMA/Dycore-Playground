@@ -280,7 +280,7 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     
     # @info norm(dQ[1,1,1:mesh.Nx:end])
     @show "source_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
-    # error("stop")
+    error("stop")
     
     M_lumped = @view mesh.vol_l_geo[3, :, :]
     for s = 1:app.num_state_prognostic
@@ -366,8 +366,9 @@ function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{
     horizontal_interface_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient) 
     vertical_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient)  
 
-    for iz = 1:Nz
-        for ix = 1:Nx
+    Threads.@threads for ix = 1:Nx
+        for iz = 1:Nz
+        
             e = ix + (iz - 1)*Nx
             for il = 1:Nl
 

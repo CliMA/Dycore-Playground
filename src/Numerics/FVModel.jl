@@ -441,7 +441,7 @@ function vertical_interface_second_order_tendency!(
     bc_bottom_type, bc_bottom_data = app.bc_bottom_type, app.bc_bottom_data
     bc_top_type, bc_top_data = app.bc_top_type, app.bc_top_data
 
-    for ix = 1:Nx        
+    Threads.@threads for ix = 1:Nx        
         for il = 1:Nl
             # single colume treatment  
             
