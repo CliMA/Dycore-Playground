@@ -23,8 +23,6 @@ function horizontal_volume_tendency!(
     dim, vol_q_geo, ϕl_q, Dl_q = mesh.dim, mesh.vol_q_geo, mesh.ϕl_q, mesh.Dl_q
     
     
-    
-    
     Threads.@threads for iz = 1:Nz
         
         # reconstructed local state at quadrature points
@@ -44,14 +42,16 @@ function horizontal_volume_tendency!(
             local_∇states_l = @view ∇state_gradient[:, :, e, :]
             local_aux_q    = @view state_auxiliary_vol_q[:, :, e]
             
-            for s = 1:num_state_prognostic
+            for s = 1:num_state_gradient
                 local_states_q[:, s]  =  ϕl_q * local_states_l[:, s]
                 local_∇states_q[:, s, :] =  ϕl_q * local_∇states_l[:, s, :]
             end
             
             for iq = 1:Nq
                 local_fluxes_q[iq, :, :]  .= flux_first_order(app, local_states_q[iq, :], local_aux_q[iq, :])
-                local_fluxes_q[iq, :, :] .+= flux_second_order(app, local_states_q[iq, :], local_∇states_q[iq, :, :], local_aux_q[iq, :]) 
+                if num_state_gradient > 0
+                    local_fluxes_q[iq, :, :] .+= flux_second_order(app, local_states_q[iq, :], local_∇states_q[iq, :, :], local_aux_q[iq, :]) 
+                end
             end
             
             # Loop Legendre-Gauss-Lobatto points to construct ∇ϕ_j = ∇_ξϕ_j J⁻¹
@@ -88,7 +88,7 @@ function horizontal_interface_tendency!(
     Nx, Nz = mesh.Nx, mesh.Nz
     bc_left_type, bc_left_data = app.bc_left_type, app.bc_left_data
     bc_right_type, bc_right_data = app.bc_left_type, app.bc_right_data
-    
+    num_state_gradient = app.num_state_gradient
     sgeo_h = mesh.sgeo_h
     
     Threads.@threads for iz = 1:Nz
@@ -118,7 +118,9 @@ function horizontal_interface_tendency!(
                 
                 if bc_left_type == "periodic"
                     local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [n1;n2])
-                    local_flux += numerical_flux_second_order(app, local_state⁻, local_∇state⁻, local_aux⁻,  local_state⁺, local_∇state⁺, local_aux⁺, [n1;n2])
+                    if num_state_gradient > 0
+                        local_flux += numerical_flux_second_order(app, local_state⁻, local_∇state⁻, local_aux⁻,  local_state⁺, local_∇state⁺, local_aux⁺, [n1;n2])
+                    end
                 elseif bc_left_type == "no-slip"
                     
                     local_flux = wall_flux_first_order(app, local_state⁺, local_aux⁺, [n1;n2])
@@ -135,7 +137,9 @@ function horizontal_interface_tendency!(
                 
                 if bc_right_type == "periodic"
                     local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁻, [n1;n2])
-                    local_flux += numerical_flux_second_order(app, local_state⁻, local_∇state⁻, local_aux⁻,  local_state⁺, local_∇state⁺, local_aux⁺, [n1;n2])
+                    if num_state_gradient > 0
+                        local_flux += numerical_flux_second_order(app, local_state⁻, local_∇state⁻, local_aux⁻,  local_state⁺, local_∇state⁺, local_aux⁺, [n1;n2])
+                    end
                 elseif bc_right_type == "no-slip"
                     
                     local_flux = wall_flux_first_order(app, local_state⁻, local_aux⁻, [n1;n2])
@@ -155,7 +159,9 @@ function horizontal_interface_tendency!(
                 
                 
                 local_flux = numerical_flux_first_order(app, local_state⁻, local_aux⁻, local_state⁺, local_aux⁺, [n1;n2])
-                local_flux += numerical_flux_second_order(app, local_state⁻, local_∇state⁻, local_aux⁻,  local_state⁺, local_∇state⁺, local_aux⁺, [n1;n2])
+                if num_state_gradient > 0
+                    local_flux += numerical_flux_second_order(app, local_state⁻, local_∇state⁻, local_aux⁻,  local_state⁺, local_∇state⁺, local_aux⁺, [n1;n2])
+                end
 
                 tendency[1,   :, e⁺] .+= sM * local_flux
                 tendency[end, :, e⁻] .-= sM * local_flux

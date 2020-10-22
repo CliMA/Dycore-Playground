@@ -123,7 +123,7 @@ function flux_second_order(app::AdvDiff, state_prognostic::Array{Float64, 1}, �
     return -app.ν*∇state_gradient
 end
 
-function flux_second_order_prim(app::AdvDiff, state_primitive::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, local_aux::Array{Float64, 1})
+function flux_second_order_prim(app::AdvDiff, state_primitive::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
     # this should be Array{Float64, 2}
     return -app.ν*∇state_gradient
 end           
@@ -142,11 +142,11 @@ end
 
 
 # Central flux
-function numerical_flux_second_order(app::AdvDiff, state_prognostic⁻::Array{Float64, 1}, state_gradient⁻::Array{Float64, 2}, state_auxiliary⁻::Array{Float64, 1}, 
-    state_prognostic⁺::Array{Float64, 1}, state_gradient⁺::Array{Float64, 2}, state_auxiliary⁺::Array{Float64, 1}, 
+function numerical_flux_second_order(app::AdvDiff, state_prognostic⁻::Array{Float64, 1}, ∇state_gradient⁻::Array{Float64, 2}, state_auxiliary⁻::Array{Float64, 1}, 
+                                                   state_prognostic⁺::Array{Float64, 1}, ∇state_gradient⁺::Array{Float64, 2}, state_auxiliary⁺::Array{Float64, 1}, 
     n::Array{Float64, 1})
     
-    return  -app.ν*0.5*(state_gradient⁻ + state_gradient⁺) * n
+    return  -app.ν*0.5*(∇state_gradient⁻ + ∇state_gradient⁺) * n
     
 end
 

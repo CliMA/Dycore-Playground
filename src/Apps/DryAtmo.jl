@@ -23,7 +23,9 @@ mutable struct DryAtmo <: Application
     
     hydrostatic_balance::Bool
     
-    
+    # constant diffusivity 
+    ν::Float64
+    Pr::Float64
     
     g::Float64
     γ::Float64
@@ -46,7 +48,7 @@ function DryAtmo(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1
     bc_top_type::String,     bc_top_data::Union{Array{Float64, 1}, Nothing},
     bc_left_type::String,    bc_left_data::Union{Array{Float64, 1}, Nothing},
     bc_right_type::String,   bc_right_data::Union{Array{Float64, 1}, Nothing},
-    viscous::Bool, 
+    viscous::Bool, ν::Float64, Pr::Float64, 
     gravity::Bool, hydrostatic_balance::Bool)
     
     num_state_prognostic = 4
@@ -79,6 +81,7 @@ function DryAtmo(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1
     bc_left_type, bc_left_data,
     bc_right_type, bc_right_data,
     hydrostatic_balance,
+    ν, Pr,
     g, γ, Rd, MSLP,
     Δt, zT, zD, 
     xT, xD, u_sponge)
@@ -120,6 +123,7 @@ function air_pressure(app::DryAtmo, ρ::Float64,  e_int::Float64)
 end
 
 function soundspeed_air(app::DryAtmo, ρ::Float64,  p::Float64)
+
     γ = app.γ
     return sqrt(γ * p / ρ)
 end
@@ -182,12 +186,14 @@ function prog_to_prim!(app::DryAtmo, state_prognostic::Array{Float64, 3}, state_
 end
 
 
+
 function compute_gradient_variables!(app::DryAtmo, state_prognostic::Array{Float64,3}, state_primitive::Array{Float64,3}, 
     state_auxiliary_vol_l::Array{Float64,3}, state_gradient::Array{Float64, 3})
 
     for il = 1:size(state_gradient, 1)
         for iz = 1:size(state_gradient, 3)
-            ρ, u, v, p, ρe = state_primitive[il, :, iz], state_prognostic[il, 4, iz]
+            ρ, u, v, p = state_primitive[il, :, iz] 
+            ρe = state_prognostic[il, 4, iz]
             h = (ρe + p)/ρ
             state_gradient[il, :, iz] .= u, v, h
         end
@@ -316,6 +322,43 @@ function numerical_flux_first_order(app::DryAtmo,
     return n_len*flux
 end
 
+
+
+function flux_second_order(app::DryAtmo, state_prognostic::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
+    # this should be Array{Float64, 2}
+    ν, Pr = app.ν, app.Pr
+    ∇u, ∇h =  ∇state_gradient[1:2, :], ∇state_gradient[3, :]
+    τ = -0.5*ν*(∇u + ∇u')
+    ρ, ρu = state_prognostic[1], state_prognostic[2:3]
+    u = ρu/ρ
+    return  [0.0 0.0;
+            ρ*τ;
+            (τ * ρ*u - ρ*ν/Pr*∇h)']
+    
+end
+
+function flux_second_order_prim(app::DryAtmo, state_primitive::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
+    # this should be Array{Float64, 2}
+    ν, Pr = app.ν, app.Pr
+    ∇u, ∇h =  ∇state_gradient[1:2, :], ∇state_gradient[3, :]
+    τ = -0.5*ν*(∇u + ∇u')
+    ρ, u = state_primitive[1], state_primitive[2:3]
+    return  [0.0 0.0;
+            ρ*τ;
+            (τ * ρ*u - ρ*ν/Pr*∇h)']
+end       
+
+
+# Central flux
+function numerical_flux_second_order(app::DryAtmo, state_prognostic⁻::Array{Float64, 1}, ∇state_gradient⁻::Array{Float64, 2}, state_auxiliary⁻::Array{Float64, 1}, 
+    state_prognostic⁺::Array{Float64, 1}, ∇state_gradient⁺::Array{Float64, 2}, state_auxiliary⁺::Array{Float64, 1}, 
+    n::Array{Float64, 1})
+
+    flux⁻ = flux_second_order(app, state_prognostic⁻, ∇state_gradient⁻, state_auxiliary⁻)
+    flux⁺ = flux_second_order(app, state_prognostic⁺, ∇state_gradient⁺, state_auxiliary⁺)
+    return  0.5*(flux⁻ + flux⁺) * n
+    
+end
 
 # Wall Flux
 # Primitive state variable vector V_i
