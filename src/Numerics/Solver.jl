@@ -251,16 +251,25 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     end
     
     horizontal_volume_tendency!(app, mesh, Q, ∇state_gradient, state_auxiliary_vol_q, dQ)
+    
+    # @info Q[1,1,1:mesh.Nx:end]
+    # @info Q[1,2,1:mesh.Nx:end]
+    # @info Q[1,3,1:mesh.Nx:end]
+    # @info norm(dQ[1,1,1:mesh.Nx:end])
 
-    @show "horizontal_volume_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
+    # @show "horizontal_volume_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
 
     horizontal_interface_tendency!(app, mesh, Q, ∇state_gradient, state_auxiliary_surf_h, dQ)
 
-    @show "horizontal_interface_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
+    # @info norm(dQ[1,1,1:mesh.Nx:end])
+
+    # @show "horizontal_interface_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
  
     vertical_interface_first_order_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
+
+    # @info norm(dQ[1,1,1:mesh.Nx:end])
   
-    @show "vertical_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
+    # @show "vertical_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
 
     if app.num_state_gradient > 0
         vertical_interface_second_order_tendency!(app, mesh, state_primitive, state_gradient, ∇state_gradient, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ)
@@ -269,9 +278,9 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
 
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
     
-
+    # @info norm(dQ[1,1,1:mesh.Nx:end])
     @show "source_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
-    
+    # error("stop")
     
     M_lumped = @view mesh.vol_l_geo[3, :, :]
     for s = 1:app.num_state_prognostic
