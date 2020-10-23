@@ -19,8 +19,10 @@ mutable struct Solver
     # diagnostic variables 
     state_diagnostic::Array{Float64,3}   # primitive variables
     
-    
-    
+    state_gradient::Array{Float64,3}       # variables need to take derivatives
+    ∇ref_state_gradient::Array{Float64,4}  # ∇_{ξ, η} state_gradient
+    ∇state_gradient::Array{Float64,4}      # ∇_{x, z} state_gradient
+
     # auxiliary variables 
     # size = （Nl, num_state, nelem) 
     state_auxiliary_vol_l::Array{Float64,3}    # auxiliary states at volume Gauss-Legendre-Lobatto points
@@ -52,8 +54,9 @@ end
 function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     
     Nx, Nz, Nl, Nq = mesh.Nx,  mesh.Nz,  mesh.Nl, mesh.Nq
-    num_state_prognostic, num_state_diagnostic, num_state_auxiliary = app.num_state_prognostic, app.num_state_diagnostic, app.num_state_auxiliary
+    num_state_prognostic, num_state_diagnostic, num_state_auxiliary, num_state_gradient = app.num_state_prognostic, app.num_state_diagnostic, app.num_state_auxiliary, app.num_state_gradient
     nelem = Nx * Nz
+    dim = 2
     
     state_prognostic = zeros(Float64, Nl, num_state_prognostic, nelem)
     Q1 = zeros(Float64, Nl, num_state_prognostic, nelem)
@@ -62,6 +65,11 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     state_primitive  = zeros(Float64, Nl, num_state_prognostic, nelem)
     
     state_diagnostic = zeros(Float64, Nl, num_state_diagnostic, nelem)
+
+
+    state_gradient      = zeros(Float64, Nl, num_state_gradient, nelem)
+    ∇ref_state_gradient = zeros(Float64, Nl, num_state_gradient, nelem, dim)
+    ∇state_gradient     = zeros(Float64, Nl, num_state_gradient, nelem, dim)
     
     
     state_auxiliary_vol_l = zeros(Float64, Nl, num_state_auxiliary, nelem)    # auxiliary states at volume Gauss-Legendre-Lobatto points
@@ -95,6 +103,7 @@ function Solver(app::Application, mesh::Mesh, params::Dict{String, Any})
     state_prognostic, Q1, 
     state_primitive, 
     state_diagnostic,
+    state_gradient, ∇ref_state_gradient, ∇state_gradient,  
     state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v,
     tendency, k1, k2, k3, k4, 
     time_integrator, cfl_freqency, cfl, dt0, t_end, 
@@ -232,20 +241,46 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
-  
     compute_min_max(app, state_primitive)
-    
-    horizontal_volume_tendency!(app, mesh, Q, state_auxiliary_vol_q, dQ)
 
-    horizontal_interface_tendency!(app, mesh, Q, state_auxiliary_surf_h, dQ)
+
+    state_gradient, ∇ref_state_gradient, ∇state_gradient = solver.state_gradient, solver.∇ref_state_gradient, solver.∇state_gradient
+    if app.num_state_gradient > 0
+        compute_gradient_variables!(app, Q, state_primitive, state_auxiliary_vol_l, state_gradient)
+        compute_gradients!(app, mesh, state_gradient, ∇ref_state_gradient, ∇state_gradient)
+    end
+    
+    horizontal_volume_tendency!(app, mesh, Q, ∇state_gradient, state_auxiliary_vol_q, dQ)
+    
+    # @info Q[1,1,1:mesh.Nx:end]
+    # @info Q[1,2,1:mesh.Nx:end]
+    # @info Q[1,3,1:mesh.Nx:end]
+    # @info norm(dQ[1,1,1:mesh.Nx:end])
+
+    # @show "horizontal_volume_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
+
+    horizontal_interface_tendency!(app, mesh, Q, ∇state_gradient, state_auxiliary_surf_h, dQ)
+
+    # @info norm(dQ[1,1,1:mesh.Nx:end])
+
+    # @show "horizontal_interface_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
  
-    vertical_interface_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
+    vertical_interface_first_order_tendency!(app, mesh, state_primitive, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ; method = solver.vertical_method)
+
+    # @info norm(dQ[1,1,1:mesh.Nx:end])
   
+    # @show "vertical_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
+
+    if app.num_state_gradient > 0
+        vertical_interface_second_order_tendency!(app, mesh, state_primitive, state_gradient, ∇state_gradient, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ)
+  
+    end
+
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
     
-
-    @show "source_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
-    
+    # @info norm(dQ[1,1,1:mesh.Nx:end])
+    # @show "source_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
+    # error("stop")
     
     M_lumped = @view mesh.vol_l_geo[3, :, :]
     for s = 1:app.num_state_prognostic
@@ -256,10 +291,7 @@ end
 
 
 function apply_filter(Q::Array{Float64,3})
-    Q[:, 2, :] .= 0.0
-    Q[:, 3, :] .= 0.0
-    return ;
-
+    
     Nl, num_state_prognostic, nelem = size(Q)
     
     Np = Nl - 1
@@ -301,6 +333,56 @@ function compute_cfl_dt(app::Application, mesh::Mesh, Q::Array{Float64,3}, Q_aux
     end
     @info "compute_cfl_dt, dt = ", min(dt_h, dt_v)
     return min(dt_h, dt_v)
+end
+
+
+"""
+This function compute gradients at volume nodal points(assume these derivatives are constant in η direction) 
+for second order equations 
+
+For advection equation:
+  ∂a/∂x, ∂a/∂z
+For Navierstokes equation:
+  ∂u/∂x, ∂u/∂z
+  ∂w/∂x, ∂w/∂z
+  ∂h/∂x, ∂h/∂z
+This function will compute ∂Y/∂ξ by DG in DGModel with 
+    volume_gradient_tendency!
+    horizontal_interface_tendency!
+and compute ∂Y/∂η by FD in FVModel with 
+    vertical_gradient!
+
+Save them in auxiliary variables?
+"""
+function compute_gradients!(app::Application, mesh::Mesh, state_gradient::Array{Float64, 3}, 
+    ∇ref_state_gradient::Array{Float64, 4}, ∇state_gradient::Array{Float64, 4})
+
+    Nx, Nz, Nl = mesh.Nx, mesh.Nz, mesh.Nl
+    vol_l_geo = mesh.vol_l_geo
+    ∇ref_state_gradient .= 0.0
+
+      
+    horizontal_volume_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient) 
+    horizontal_interface_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient) 
+    vertical_gradient_tendency!(app, mesh, state_gradient, ∇ref_state_gradient)  
+
+    Threads.@threads for ix = 1:Nx
+        for iz = 1:Nz
+        
+            e = ix + (iz - 1)*Nx
+            for il = 1:Nl
+
+
+                ∂ξ∂x, ∂ξ∂z, ∂η∂x, ∂η∂z = vol_l_geo[4:7, il, e]
+                ∇state_gradient[il, :, e, 1] .=  ∇ref_state_gradient[il, :, e, 1] * ∂ξ∂x + ∇ref_state_gradient[il, :, e, 2] * ∂η∂x
+                ∇state_gradient[il, :, e, 2] .=  ∇ref_state_gradient[il, :, e, 1] * ∂ξ∂z + ∇ref_state_gradient[il, :, e, 2] * ∂η∂z
+            end
+        end
+    end
+
+
+
+    
 end
 
 

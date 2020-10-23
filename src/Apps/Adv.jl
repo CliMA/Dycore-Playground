@@ -94,7 +94,6 @@ function prog_to_prim!(app::Adv, state_prognostic::Array{Float64, 3}, state_auxi
 end
 
 
-
 function flux_first_order(app::Adv, state_prognostic::Array{Float64, 1}, state_auxiliary::Array{Float64, 1})
     
     return [state_prognostic*app.u  state_prognostic*app.w]
@@ -140,10 +139,6 @@ function init_state_auxiliary!(app::Adv, mesh::Mesh,
     
 end
 
-function update_state_auxiliary!(app::Adv, mesh::Mesh, state_primitive::Array{Float64, 3},
-    state_auxiliary_vol_l::Array{Float64, 3}, state_auxiliary_vol_q::Array{Float64, 3}, 
-    state_auxiliary_surf_h::Array{Float64, 4}, state_auxiliary_surf_v::Array{Float64, 4})
-end
 
 function bc_impose(app::Adv, state_primitive::Array{Float64, 1}, bc_type::String, n::Array{Float64, 1})
     @warn("Adv bc_impose")
