@@ -132,7 +132,7 @@ function horizontal_interface_tendency!(
                 end
                 
                 tendency[1,   :, e⁺] .+= sM * local_flux
-                
+         
             elseif ix == Nx + 1 # right bc
                 
                 (n1, n2, sM) = sgeo_h[:, 1, end, e⁻] 
@@ -151,7 +151,7 @@ function horizontal_interface_tendency!(
                 end
                 
                 tendency[end, :, e⁻] .-= sM * local_flux
-                
+
             else
                 
                 

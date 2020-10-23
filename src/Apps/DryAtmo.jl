@@ -179,8 +179,8 @@ end
 function prog_to_prim!(app::DryAtmo, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3}, state_primitive::Array{Float64, 3})
     # state_primitive = size(Nl, num_state_prognostic, Nz+1)
     for il = 1:size(state_prognostic, 1)
-        for iz = 1:size(state_prognostic, 3)
-            state_primitive[il, :, iz] .= prog_to_prim(app, state_prognostic[il, :, iz], state_auxiliary[il, :, iz])
+        for e = 1:size(state_prognostic, 3)
+            state_primitive[il, :, e] .= prog_to_prim(app, state_prognostic[il, :, e], state_auxiliary[il, :, e])
         end
     end
 end
@@ -191,13 +191,14 @@ function compute_gradient_variables!(app::DryAtmo, state_prognostic::Array{Float
     state_auxiliary_vol_l::Array{Float64,3}, state_gradient::Array{Float64, 3})
 
     for il = 1:size(state_gradient, 1)
-        for iz = 1:size(state_gradient, 3)
-            ρ, u, v, p = state_primitive[il, :, iz] 
-            ρe = state_prognostic[il, 4, iz]
+        for e = 1:size(state_gradient, 3)
+            ρ, u, v, p = state_primitive[il, :, e] 
+            ρe = state_prognostic[il, 4, e]
             h = (ρe + p)/ρ
-            state_gradient[il, :, iz] .= u, v, h
+            state_gradient[il, :, e] .= u, v, h
         end
     end
+
 end
 
 

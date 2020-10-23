@@ -2,7 +2,7 @@ include("../src/Numerics/Mesh.jl")
 include("../src/Apps/Application.jl")
 include("../src/Numerics/Solver.jl")
 
-
+import PyPlot
 
 
 function isentropic_vortex(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int64, (3*Np + 1)/2))
@@ -45,14 +45,14 @@ function isentropic_vortex(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(
         γ = 1.4  
         ρ∞ = 1.0
         
-        u∞ = 1.0
+        u∞ = 0.5
         M∞ = 0.5
         c∞ = u∞/M∞ 
-        θ = atan(0.5)
+        θ = π/4
         p∞ = ρ∞*c∞^2/γ
         ū, v̄ = u∞*cos(θ), u∞*sin(θ)
-        ϵ = 0.3
-        r = 1.5
+        ϵ = 5.0
+        r = 1.0
         x₀, z₀ = 0.0, 5.0
         
         
@@ -65,9 +65,12 @@ function isentropic_vortex(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(
         ρe = p/(γ-1) + 0.5*(ρ*u^2 + ρ*v^2) 
         return [ρ; ρ*u; ρ*v; ρe]
     end
-    
+
     init_state!(app, mesh, state_prognostic_0, init_func)
     set_init_state!(solver, state_prognostic_0)
+
+    
+    
     
 
     state_primitive_0 = similar(state_prognostic_0)
@@ -80,6 +83,26 @@ function isentropic_vortex(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(
     
     Q = solve!(solver)
     
+    ρ  = reshape(Q[:, 1 ,:], (Nl * Nx, Nz)) 
+    nx_plot, nz_plot = div(Nl * Nx, 2) , div(Nz, 2)
+    fig, (ax1, ax2) = PyPlot.subplots(ncols = 2, nrows=1, sharex=false, sharey=false, figsize=(12,6))
+    xx = reshape(mesh.vol_l_geo[1,:,:], (Nl * Nx, Nz))[:, nz_plot]
+    zz = reshape(mesh.vol_l_geo[2,:,:], (Nl * Nx, Nz))[nx_plot, :]
+    
+    ax1.plot(xx, ρ[:, nz_plot],  "-o", fillstyle = "none", label = "xx")
+    ax2.plot(zz, ρ[nx_plot, :],  "-o", fillstyle = "none", label = "zz")
+    ax1.set_ylabel("ρ")
+    fig.savefig("Isentropic_Vortex_rho_xz.png")
+    PyPlot.close(fig)
+
+
+   
+    
+
+
+
+    
+
     
     state_primitive = similar(Q)
     prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive)
