@@ -625,7 +625,7 @@ function vertical_gradient_tendency!(
                         ∇ref_state_gradient[il, :, e, 2] = (state_gradient_face[:,iz+1] - state_gradient_face[:,iz])/2.0
                     elseif bc_top_type == "no-penetration"
                         # todo one side gradient
-                        ∇ref_state_gradient[il, :, e, 2] = (state_gradient[:,iz] - state_gradient_col[:,iz])   
+                        ∇ref_state_gradient[il, :, e, 2] = (state_gradient_col[:, iz] - state_gradient_col[:,iz])   
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
                     end

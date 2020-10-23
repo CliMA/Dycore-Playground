@@ -61,8 +61,8 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     topology_size = [Lx; Lz]
     topology = topology_les(Nl, Nx, Nz, Lx, Lz)
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
-    viscous, ν, Pr = false, NaN64, NaN64
-    # viscous, ν, Pr = true, 0.01, 0.72
+    # viscous, ν, Pr = false, NaN64, NaN64
+    viscous, ν, Pr = true, 0.01, 0.72
     gravity = true
     hydrostatic_balance = true
     
