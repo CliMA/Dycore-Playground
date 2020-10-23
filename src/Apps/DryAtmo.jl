@@ -361,6 +361,15 @@ function numerical_flux_second_order(app::DryAtmo, state_prognostic⁻::Array{Fl
     
 end
 
+function bc_second_order_flux(app::DryAtmo, state_primitive::Array{Float64, 1}, bc_type::String, bc_data::Array{Float64, 1})
+    @assert(bc_type == "no-penetration")
+    ρ = state_primitive[1]
+    # τn = -0.5*ν*(∇u + ∇u')n, JD = - ν/Pr*∇h n
+    τn, JD = bc_data[1:2], bc_data[3]
+    return [0.0; ρ*τn; ρ*JD]
+end
+
+
 # Wall Flux
 # Primitive state variable vector V_i
 # outward wall normal n_i

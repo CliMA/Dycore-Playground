@@ -473,6 +473,12 @@ function vertical_interface_second_order_tendency!(
                         ∇state_gradient_face =  gradient_correction(∇state_gradient⁻, state_gradient⁻, Δz⁻,  ∇state_gradient⁺, state_gradient⁺, Δz⁺, [x⁺-x+xp-x⁻, z⁺-z+zp-z⁻])
                         # use the auxiliary state in  local_aux⁺
                         local_flux = flux_second_order_prim(app, state_primitive_face, ∇state_gradient_face, local_aux⁺)*[n1;n2]
+                    elseif bc_bottom_type == "no-penetration"
+                        # prescribed τ⋅n, the entraining flux is ρ * τ⋅n
+                        # constant reconstruction for the primitive variables, for we only need ρ, no hydrostatic balanced reconstruction is needed
+                        state_primitive_face = state_primitive[il, :, e⁺]
+                        # the flux is in the z+ direction
+                        local_flux = bc_second_order_flux(app, state_primitive_face, bc_bottom_type, bc_bottom_data)
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " for second order vertical flux has not implemented")   
                     end
@@ -489,6 +495,12 @@ function vertical_interface_second_order_tendency!(
                         ∇state_gradient_face =  gradient_correction(∇state_gradient⁻, state_gradient⁻, Δz⁻,  ∇state_gradient⁺, state_gradient⁺, Δz⁺, [x-x⁻+x⁺-xp, z-z⁻+z⁺-zp])
                         # use the auxiliary state in  local_aux⁻
                         local_flux = flux_second_order_prim(app, state_primitive_face, ∇state_gradient_face, local_aux⁻)*[n1;n2]
+                    elseif bc_top_type == "no-penetration"
+                        # prescribed flux 
+                        # constant reconstruction for the primitive variables, for we only need ρ, no hydrostatic balanced reconstruction is needed
+                        state_primitive_face = state_primitive[il, :, e⁻]
+                        # the flux is in the z+ direction
+                        local_flux = bc_second_order_flux(app, state_primitive_face, bc_top_type, bc_top_data)
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " for second order vertical flux has not implemented")   
                     end
@@ -521,7 +533,8 @@ end
 """
 This function compute ∂Y/∂η
 This function must be called after 
-    horizontal_interface_gradient_tendency!(
+    horizontal_interface_gradient_tendency!
+    horizontal_volume_gradient_tendency!
 """
 function vertical_gradient_tendency!(
     app::Application,
@@ -553,19 +566,23 @@ function vertical_gradient_tendency!(
                         Δz⁻, Δz⁺ = Δzc_col[Nz], Δzc_col[1] 
                         # interpolation to get face value at izth face, and 
                         state_gradient_face[:,iz] .= (state_gradient_col[:,mod1(iz-1, Nz)]*Δz⁺ + state_gradient_col[:,mod1(iz, Nz)]*Δz⁻)/(Δz⁻ + Δz⁺)
+                    elseif bc_bottom_type == "no-penetration"
+                        # do nothing
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
                     end
 
                     # top
                 elseif iz == Nz+1
-                    if bc_bottom_type == "periodic"
+                    if bc_top_type == "periodic"
                         
                         Δz⁻, Δz⁺ = Δzc_col[Nz], Δzc_col[1] 
                         # interpolation to get face value at izth face, and 
                         state_gradient_face[:,iz] .= (state_gradient_col[:,mod1(iz-1, Nz)]*Δz⁺ + state_gradient_col[:,mod1(iz, Nz)]*Δz⁻)/(Δz⁻ + Δz⁺)
+                    elseif bc_top_type == "no-penetration"
+                        # do nothing
                     else
-                        error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
+                        error("bc_top_type = ", bc_top_type, " for second order equations has not implemented")   
                     end
 
                 else
@@ -574,6 +591,7 @@ function vertical_gradient_tendency!(
                     # interpolation to get face value at izth face, and 
                     state_gradient_face[:,iz] .= (state_gradient_col[:,mod1(iz-1, Nz)]*Δz⁺ + state_gradient_col[:,mod1(iz, Nz)]*Δz⁻)/(Δz⁻ + Δz⁺)
                 end
+
                 
             end
             
@@ -592,6 +610,9 @@ function vertical_gradient_tendency!(
                     if bc_bottom_type == "periodic"
                         # use the auxiliary state in  local_aux⁺
                         ∇ref_state_gradient[il, :, e, 2] = (state_gradient_face[:,iz+1] - state_gradient_face[:,iz])/2.0
+                    elseif bc_bottom_type == "no-penetration"
+                        # todo one side gradient
+                        ∇ref_state_gradient[il, :, e, 2] = (state_gradient_face[:,iz+1] - state_gradient_col[:,iz])
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
                     end
@@ -602,7 +623,9 @@ function vertical_gradient_tendency!(
                     if bc_top_type == "periodic"
                         # use the auxiliary state in  local_aux⁻
                         ∇ref_state_gradient[il, :, e, 2] = (state_gradient_face[:,iz+1] - state_gradient_face[:,iz])/2.0
-                        
+                    elseif bc_top_type == "no-penetration"
+                        # todo one side gradient
+                        ∇ref_state_gradient[il, :, e, 2] = (state_gradient[:,iz] - state_gradient_col[:,iz])   
                     else
                         error("bc_bottom_type = ", bc_bottom_type, " for second order equations has not implemented")   
                     end
