@@ -327,11 +327,36 @@ end
 
 function flux_second_order(app::DryAtmo, state_prognostic::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
     # this should be Array{Float64, 2}
-    ν, Pr = app.ν, app.Pr
+    # ν, Pr = app.ν, app.Pr
+
+    # 
+    ### Dynamic viscosity computation
+    # Currently a common, Smagorinsky-type model is implemented
+    # 
     ∇u, ∇h =  ∇state_gradient[1:2, :], ∇state_gradient[3, :]
-    τ = -0.5*ν*(∇u + ∇u')
+    # Compute strain-rate tensor (symmetric)
+    S⃗ = (∇u + ∇u')/2
+    # Compute viscosity based on strain-rate
+    # TODO: Provide general function hooks for TurbulenceClosures.jl 
+    # FIXME: C_s a free parameter
+    C_s = Float64(0.20)
+    Δ = Float64(250)
+    #Δᵢ, Δⱼ  = app.Δ (?) # Model grid-scale inferred from app properties in some way ? 
+
+    ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
+    # Neutral stratification turbulent-Prandtl number
+    Pr = FT(1/3)
+    # Compute stress tensor from strain-rate tensor
+    # TODO: Decompose into horizontal-vertical components at this level
+    τ = -2*ν*S⃗
+    # 
+    ###
+    #
+    
     ρ, ρu = state_prognostic[1], state_prognostic[2:3]
     u = ρu/ρ
+
+    # Return second order fluxes
     return  [0.0 0.0;
             ρ*τ;
             (τ * ρ*u - ρ*ν/Pr*∇h)']
@@ -340,9 +365,30 @@ end
 
 function flux_second_order_prim(app::DryAtmo, state_primitive::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
     # this should be Array{Float64, 2}
-    ν, Pr = app.ν, app.Pr
+    
+    # 
+    ### Dynamic viscosity computation
+    # 
+    # Update ν, Pr using dynamic model
     ∇u, ∇h =  ∇state_gradient[1:2, :], ∇state_gradient[3, :]
-    τ = -0.5*ν*(∇u + ∇u')
+    # Compute strain-rate tensor (symmetric)
+    S⃗ = (∇u + ∇u')/2
+    # Compute viscosity based on strain-rate
+    # TODO: Provide general function hooks for TurbulenceClosures.jl 
+    # FIXME: C_s a free parameter
+    C_s = Float64(0.20)
+    Δ = Float64(250)
+    #Δᵢ, Δⱼ  = app.Δ (?) # Model grid-scale inferred from app properties in some way ? 
+    ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
+    # Neutral stratification turbulent-Prandtl number
+    Pr = FT(1/3)
+    # Compute stress tensor from strain-rate tensor
+    # TODO: Decompose into horizontal-vertical components at this level
+    τ = -2*ν*S⃗
+    # 
+    ###
+    #
+    
     ρ, u = state_primitive[1], state_primitive[2:3]
     return  [0.0 0.0;
             ρ*τ;
