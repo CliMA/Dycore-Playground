@@ -69,7 +69,7 @@ function adv_square(test_case::String, vertical_method::String, t_end::Float64=3
     Q = solve!(solver)
     
     # visualize the solution at t_end 
-    visual(mesh, Q[:,1,:], "Adv_"*test_case*"_end_"*vertical_method*".png")
+    visual(mesh, Q[:,1,:], "AdvDiff_"*test_case*"_end_"*vertical_method*".png")
     
     coord_z = reshape(mesh.vol_l_geo[2,:,:], (Nl * Nx, Nz))[div(Nl * Nx, 2), :]
     Q0_z  = reshape(state_prognostic_0, (Nl * Nx, Nz))[div(Nl * Nx, 2), :]
@@ -82,7 +82,7 @@ function adv_square(test_case::String, vertical_method::String, t_end::Float64=3
     PyPlot.plot(coord_z, Q_z, "-o", fillstyle = "none", label = vertical_method)
     PyPlot.plot(coord_x, Q_x, "-o", fillstyle = "none", label = "DG (p=3 overintegration)")
     PyPlot.legend()
-    PyPlot.savefig("Adv_"*test_case*"_end_section"*vertical_method*".pdf")
+    PyPlot.savefig("AdvDiff_"*test_case*"_end_section"*vertical_method*".pdf")
     
     
     return 
@@ -93,7 +93,7 @@ end
 period = 1
 adv_square("square", "FV",    3.0*period)
 # adv_square("square", "WENO3", 3.0*period)
-# adv_square("square", "WENO5", 3.0*period)
+adv_square("square", "WENO5", 3.0*period)
 
 
 # adv_square("gaussian", "WENO3", 3.0*period)

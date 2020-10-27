@@ -59,6 +59,28 @@ function mountain_wrap_les!(Nl::Int64, Nx::Int64, Nz::Int64, Lx::Float64, Lz::Fl
     end
     
 end
+
+
+function mountain_wrap_les!(Nl::Int64, Nx::Int64, Nz::Int64, Lx::Float64, Lz::Float64, topology::Array{Float64, 3}, f_topology::Function)
+
+    
+    dim = 2
+    @assert(size(topology) == (dim, (Nl - 1)*Nx + 1, Nz + 1))
+
+    # zb
+    xb = topology[1, :, 1]
+
+    zb = f_topology(xb)
+
+    # h, a = 1 , 1e3 
+    # zb = h*a*a/(xb.^2 .+ a^2)
+
+    for ix = 1:(Nl - 1)*Nx + 1
+        topology[2, ix, :] = zb[ix] .+ topology[2, ix, :]/ Lz *(Lz - zb[ix])
+    end
+    
+end
+
 """
 GCM~(Arch) configuration
 Nl: number of Gauss-Legendre-Lobatto points in each element

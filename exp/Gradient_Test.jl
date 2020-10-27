@@ -56,7 +56,7 @@ function gradient_test(test_type::String, Np::Int64=2, Nq::Int64=ceil(Int64, (3*
     
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
     vol_l_geo = mesh.vol_l_geo
-    viscous = true
+    viscous, ν, Pr = true, 1.0e-2, 0.72
     gravity = false
     hydrostatic_balance = false
     
@@ -85,7 +85,7 @@ function gradient_test(test_type::String, Np::Int64=2, Nq::Int64=ceil(Int64, (3*
     ∇state_gradient = zeros(Nl, num_state_gradient, nelem, dim)
     
     
-    app = DryAtmo("periodic", nothing, "periodic", nothing,  "periodic", nothing, "periodic", nothing, viscous, gravity, hydrostatic_balance)
+    app = DryAtmo("periodic", nothing, "periodic", nothing,  "periodic", nothing, "periodic", nothing, viscous, ν, Pr,  gravity, hydrostatic_balance)
     
     compute_gradients!(app, mesh, state_gradient, ∇ref_state_gradient, ∇state_gradient)
     
