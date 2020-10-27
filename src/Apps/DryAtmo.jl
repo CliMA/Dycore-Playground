@@ -345,7 +345,7 @@ function flux_second_order(app::DryAtmo, state_prognostic::Array{Float64, 1}, �
 
     ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
     # Neutral stratification turbulent-Prandtl number
-    Pr = FT(1/3)
+    Pr = Float64(1/3)
     # Compute stress tensor from strain-rate tensor
     # TODO: Decompose into horizontal-vertical components at this level
     τ = -2*ν*S⃗
@@ -381,7 +381,7 @@ function flux_second_order_prim(app::DryAtmo, state_primitive::Array{Float64, 1}
     #Δᵢ, Δⱼ  = app.Δ (?) # Model grid-scale inferred from app properties in some way ? 
     ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
     # Neutral stratification turbulent-Prandtl number
-    Pr = FT(1/3)
+    Pr = Float64(1/3)
     # Compute stress tensor from strain-rate tensor
     # TODO: Decompose into horizontal-vertical components at this level
     τ = -2*ν*S⃗

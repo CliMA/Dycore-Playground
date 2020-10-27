@@ -112,14 +112,6 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     fig.savefig("Rising_Bubble_rho_xz.png")
     PyPlot.close(fig)
 
-
-   
-    
-
-
-
-    
-
     
     state_primitive = similar(Q)
     prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive)
