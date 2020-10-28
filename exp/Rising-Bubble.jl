@@ -3,6 +3,7 @@ include("../src/Apps/Application.jl")
 include("../src/Numerics/Solver.jl")
 
 import PyPlot
+using Printf
 
 
 function init_risingbubble(x::Float64, z::Float64)
@@ -53,8 +54,10 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     topology_type = "AtmoLES"
     
     
-    Nx, Nz = 80,   80*Nl
+    Nx, Nz = 10,  10*Nl
     Lx, Lz = 10000.0, 10000.0
+    Δₕ, Δᵥ = Lx / Nx / Nl , Lz / Nz
+    @printf("Δₕ=%f, Δᵥ=%f \n", Δₕ, Δᵥ)
     
     
     
@@ -62,7 +65,7 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     topology = topology_les(Nl, Nx, Nz, Lx, Lz)
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
     # viscous, ν, Pr = false, NaN64, NaN64
-    viscous, ν, Pr = true, 0.01, 0.72
+    viscous, ν, Pr = true, 50.0, 0.72
     gravity = true
     hydrostatic_balance = true
     
@@ -73,29 +76,23 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     
     
     app = DryAtmo("no-penetration", [0.0;0.0;0.0], "no-penetration", [0.0;0.0;0.0],  "periodic", nothing, "periodic", nothing, 
-    viscous, ν, Pr,  
+    viscous, ν, Pr, Δₕ, Δᵥ,
     gravity, hydrostatic_balance)
     
     
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.5/Np, "dt0" => 0.02, "t_end" => 0.050000, "vertical_method" => vertical_method)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.5/Np, "dt0" => 0.02, "t_end" => 1000.00, "vertical_method" => vertical_method)
     
     solver = Solver(app, mesh, params)
     
-
-
     init_state!(app, mesh, state_prognostic_0, init_risingbubble)
     set_init_state!(solver, state_prognostic_0)
-
-    
-    
-    
 
     state_primitive_0 = similar(state_prognostic_0)
     prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
     visual(mesh, state_primitive_0[:,1,:], "Rising_Bubble_rho_init.png")
     visual(mesh, state_primitive_0[:,2,:], "Rising_Bubble_u_init.png")
     visual(mesh, state_primitive_0[:,3,:], "Rising_Bubble_v_init.png")
-    visual(mesh, state_primitive_0[:,4,:], "Rising_Bubble_T_init.png")
+    visual(mesh, state_primitive_0[:,4,:], "Rising_Bubble_p_init.png")
     
     
     Q = solve!(solver)
@@ -118,7 +115,7 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     visual(mesh, state_primitive[:,1,:], "Rising_Bubble_rho_end.png")
     visual(mesh, state_primitive[:,2,:], "Rising_Bubble_u_end.png")
     visual(mesh, state_primitive[:,3,:], "Rising_Bubble_v_end.png")
-    visual(mesh, state_primitive[:,4,:], "Rising_Bubble_p_end.png")
+    visual(mesh, state_primitive[:,4,:], "Rising_Bubble_theta_end.png")
     
     
 end

@@ -161,23 +161,22 @@ function solve!(solver::Solver)
         
         t += dt
       
-        if rem(t,10) == 0 
-          @show("Time[s] = ",t);
-        end
-        if rem(t,100) == 0
-            state_primitive_0 = similar(state_prognostic_0)
+        if rem(ite, 500) == 0
+            state_prognostic_0 = similar(Q)
+            state_primitive_0 = similar(Q)
+            θ = similar(state_primitive_0[:,4,:])
+            prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
             p = state_primitive_0[:,4,:];
             ρ = state_primitive_0[:,1,:];
             Rd = 287.058;
             cp = 1004.7;
-            MSLP = 1.01325e5
+            MSLP = 1.01325e5;
             state_primitive_T = p ./ ρ ./ Rd;
-            θ = state_primitive_T .* (MSLP ./ p) ^ (Rd/cp) 
-            prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
-            visual(mesh, state_primitive_0[:,1,:], "Rising_Bubble_rho_init"*"$(round(t))"*".png")
-            visual(mesh, state_primitive_0[:,2,:], "Rising_Bubble_u_init"*"$(round(t))"*".png")
-            visual(mesh, state_primitive_0[:,3,:], "Rising_Bubble_v_init"*"$(round(t))"*".png")
-            visual(mesh, θ, "Rising_Bubble_theta_init"*"$(round(t))"*".png")
+            #θ = state_primitive_T .* (MSLP ./ p) .^ (Rd/cp) 
+            visual(mesh, state_primitive_0[:,1,:], "Rising_Bubble_rho_"*"$(round(t))"*".png")
+            visual(mesh, state_primitive_0[:,2,:], "Rising_Bubble_u_"*"$(round(t))"*".png")
+            visual(mesh, state_primitive_0[:,3,:], "Rising_Bubble_v_"*"$(round(t))"*".png")
+            #visual(mesh, θ, "Rising_Bubble_theta_init"*"$(round(t))"*".png")
         end
         
     end
