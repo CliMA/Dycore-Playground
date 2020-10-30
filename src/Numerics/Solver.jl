@@ -160,10 +160,11 @@ function solve!(solver::Solver)
         # apply_filter(Q)
         
         t += dt
-        
+        # @info "t = ", t
     end
     
-    @info "Finish simulation: total iterations: ", ite, " dt0, cfl_dt0, t_end = ", dt0, " ", cfl_dt0, " ", t_end
+    
+    @info "Finish simulation: total iterations: ", ite, " dt0, cfl_dt0, t, t_end = ", dt0, " ", cfl_dt0, " ", t , " ", t_end
     
     return Q
 end
@@ -241,7 +242,7 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, state_auxiliary_vol_l,  state_primitive)
-    compute_min_max(app, state_primitive)
+    # compute_min_max(app, state_primitive)
 
 
     state_gradient, ∇ref_state_gradient, ∇state_gradient = solver.state_gradient, solver.∇ref_state_gradient, solver.∇state_gradient

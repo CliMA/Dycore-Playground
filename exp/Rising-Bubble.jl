@@ -32,9 +32,10 @@ function init_risingbubble(x::Float64, z::Float64)
 
     # Compute perturbed thermodynamic state:
     θ = θ_ref + Δθ                                      ## potential temperature
-    π_exner = 1.0 - _grav / (c_p * θ_ref) * z               ## exner pressure
+    π_exner = 1.0 - _grav / (c_p * θ) * z               ## exner pressure
     ρ = p0 / (R_gas * θ) * (π_exner)^(c_v / R_gas)      ## density
     T = θ * π_exner
+
     p = ρ * R_gas * T
     # p_test = p0*(1 - _grav / (c_p * θ_ref)*z)^(c_p/R_gas)
     # @info p_test, p
@@ -96,7 +97,7 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     gravity, hydrostatic_balance)
     
     
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.5/Np, "dt0" => 0.02, "t_end" => 360.0, "vertical_method" => vertical_method)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.5, "dt0" => 0.1, "t_end" => 1000.0, "vertical_method" => vertical_method)
     
     solver = Solver(app, mesh, params)
     
@@ -167,7 +168,7 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
 end
 
 
-vertical_method = "FV"
+vertical_method = "WENO5"
 Np = 4
 rising_bubble(vertical_method, Np)
 
