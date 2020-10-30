@@ -163,8 +163,8 @@ function solve!(solver::Solver)
       
         if rem(ite, 1000) == 0
             @info "Plotting output at $(round(t)) simulation seconds"
-            state_prognostic_output = similar(Q)
-            prog_to_prim!(app, state_prognostic_output, solver.state_auxiliary_vol_l, state_primitive_0)
+            state_primitive_0 = similar(state_prognostic_0)
+            prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive_0)
             # Unpack Primitives
             p = state_primitive_0[:,4,:];
             ρ = state_primitive_0[:,1,:];
