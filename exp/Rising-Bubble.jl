@@ -65,7 +65,7 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     topology = topology_les(Nl, Nx, Nz, Lx, Lz)
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
     # viscous, ν, Pr = false, NaN64, NaN64
-    viscous, ν, Pr = true, 50.0, 0.72
+    viscous, ν, Pr = true, 50.0, Float64(1/3)
     gravity = true
     hydrostatic_balance = true
     
@@ -74,13 +74,16 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     
     state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
     
+    # diffusion model
+    diffusion_model = ConstantKinematic(100.0)
+    @show (diffusion_model);
     
     app = DryAtmo("no-penetration", [0.0;0.0;0.0], "no-penetration", [0.0;0.0;0.0],  "periodic", nothing, "periodic", nothing, 
-    viscous, ν, Pr, Δₕ, Δᵥ,
+    viscous, diffusion_model,
+    ν, Pr, Δₕ, Δᵥ,
     gravity, hydrostatic_balance)
     
-    
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.5/Np, "dt0" => 0.02, "t_end" => 1000.00, "vertical_method" => vertical_method)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.5, "dt0" => 0.02, "t_end" => 1000.00, "vertical_method" => vertical_method)
     
     solver = Solver(app, mesh, params)
     

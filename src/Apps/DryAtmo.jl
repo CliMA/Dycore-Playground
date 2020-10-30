@@ -1,4 +1,8 @@
 include("TemperatureProfiles.jl")
+include("TurbulenceClosures.jl")
+
+abstract type TurbulenceClosure end
+
 
 mutable struct DryAtmo <: Application
     num_state_prognostic::Int64
@@ -24,6 +28,7 @@ mutable struct DryAtmo <: Application
     hydrostatic_balance::Bool
     
     # constant diffusivity 
+    diffusion_model::TurbulenceClosure
     ν::Float64
     Pr::Float64
     Δₕ::Float64
@@ -44,13 +49,64 @@ mutable struct DryAtmo <: Application
     
 end
 
+# ======== Turbulence Closure Content ============= # 
+
+# Fallback method
+function compute_diffusivity(
+    ::TurbulenceClosure, 
+    app::DryAtmo,
+    ∇u::Array{Float64,2}
+  )
+  nothing
+  @warn ("Default values from `app` are being used since no TurbulenceClosure is specified.") maxlog = 1
+  return (app.ν, app.ν / app.Pr)
+end
+
+#
+### Smagorinsky
+#
+
+struct Smagorinsky <: TurbulenceClosure 
+  C_s::Float64
+end
+
+function compute_diffusivity(
+    m::Smagorinsky, 
+    app::DryAtmo,
+    ∇u::Array{Float64,2},
+  )
+  C_s = m.C_s
+  Δ = app.Δₕ
+  S = (∇u + ∇u')/2
+  ν = (C_s * Δ)^2 * sqrt(2 * sum(S⃗ * S⃗))
+  D = ν ./ m.Pr 
+  return (ν,D)
+end
+
+#
+### Constant Kinematic Viscosity [m^2/s]
+#
+struct ConstantKinematic <: TurbulenceClosure
+  ν::Float64
+end
+function compute_diffusivity(
+    m::ConstantKinematic,
+    app::DryAtmo,
+    ∇u::Array{Float64,2},
+  )
+  return (m.ν, m.ν/ app.Pr)
+end
+
+# ======== Turbulence Closure Content ============= # 
 
 
 function DryAtmo(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1}, Nothing},
     bc_top_type::String,     bc_top_data::Union{Array{Float64, 1}, Nothing},
     bc_left_type::String,    bc_left_data::Union{Array{Float64, 1}, Nothing},
     bc_right_type::String,   bc_right_data::Union{Array{Float64, 1}, Nothing},
-    viscous::Bool, ν::Float64,
+    viscous::Bool, 
+    diffusion_model::TurbulenceClosure,
+    ν::Float64,
     Δₕ::Float64, Δᵥ::Float64,
     Pr::Float64, 
     gravity::Bool, hydrostatic_balance::Bool)
@@ -62,6 +118,8 @@ function DryAtmo(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1
     
     # u, v, T
     num_state_gradient = (viscous ? 3 : 0)
+
+    
     
     # constant
     if gravity == false
@@ -85,6 +143,7 @@ function DryAtmo(bc_bottom_type::String,  bc_bottom_data::Union{Array{Float64, 1
     bc_left_type, bc_left_data,
     bc_right_type, bc_right_data,
     hydrostatic_balance,
+    diffusion_model,
     ν, Pr, Δₕ, Δᵥ,
     g, γ, Rd, MSLP,
     Δt, zT, zD, 
@@ -330,69 +389,32 @@ end
 
 
 function flux_second_order(app::DryAtmo, state_prognostic::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
-    # this should be Array{Float64, 2}
-    # 
-    ### Dynamic viscosity computation
-    # Currently a common, Smagorinsky-type model is implemented
-    # 
+    # Update ν, D_t using dynamic model
     ∇u, ∇h =  ∇state_gradient[1:2, :], ∇state_gradient[3, :]
     # Compute strain-rate tensor (symmetric)
+    ν, D_t = compute_diffusivity(app.diffusion_model, app, ∇u)
     S⃗ = (∇u + ∇u')/2
-   
-    C_s = Float64(0.20)
-    Δ = app.Δₕ
-    #Δᵢ, Δⱼ  = app.Δ (?) # Model grid-scale inferred from app properties in some way ? 
-    ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
-  
-    # Compute viscosity based on strain-rate
-    # TODO: Provide general function hooks for TurbulenceClosures.jl 
-    # FIXME: C_s a free parameter
-    # Neutral stratification turbulent-Prandtl number
-    Pr = Float64(1/3)
-    # Compute stress tensor from strain-rate tensor
-    # TODO: Decompose into horizontal-vertical components at this level
     τ = -2*ν*S⃗
-    # 
-    ###
-    #
     ρ, ρu = state_prognostic[1], state_prognostic[2:3]
     u = ρu/ρ
-
     # Return second order fluxes
     return  [0.0 0.0;
             ρ*τ;
-            (τ * ρ*u - ρ*ν/Pr*∇h)']
+            (τ * ρ*u - ρ*D_t*∇h)']
     
 end
 function flux_second_order_prim(app::DryAtmo, state_primitive::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
-    ν, Pr = app.ν, app.Pr
-    # 
-    ### Dynamic viscosity computation
-    # 
-    # Update ν, Pr using dynamic model
+    # Update ν, D_t using dynamic model
     ∇u, ∇h =  ∇state_gradient[1:2, :], ∇state_gradient[3, :]
     # Compute strain-rate tensor (symmetric)
+    ν, D_t=  compute_diffusivity(app.diffusion_model, app,∇u)
     S⃗ = (∇u + ∇u')/2
-    # Compute viscosity based on strain-rate
-    # TODO: Provide general function hooks for TurbulenceClosures.jl 
-    # FIXME: C_s a free parameter
-    C_s = Float64(0.20)
-    Δ = app.Δₕ
-    #Δᵢ, Δⱼ  = app.Δ (?) # Model grid-scale inferred from app properties in some way ? 
-    ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
-    # Neutral stratification turbulent-Prandtl number
-    Pr = Float64(1/3)
-    # Compute stress tensor from strain-rate tensor
-    # TODO: Decompose into horizontal-vertical components at this level
-    #Overwrite to get ν
     τ = -2*ν*S⃗
-    # 
-    ###
-    #
     ρ, u = state_primitive[1], state_primitive[2:3]
+    # Return second order fluxes
     return  [0.0 0.0;
             ρ*τ;
-            (τ * ρ*u - ρ*ν/Pr*∇h)']
+            (τ * ρ*u - ρ*D_t*∇h)']
 end       
 
 
