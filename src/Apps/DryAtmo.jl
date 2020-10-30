@@ -339,11 +339,10 @@ function flux_second_order(app::DryAtmo, state_prognostic::Array{Float64, 1}, �
     # Compute strain-rate tensor (symmetric)
     S⃗ = (∇u + ∇u')/2
    
-    ν, Pr = app.ν, app.Pr
     C_s = Float64(0.20)
-    Δ = Float64(250)
+    Δ = app.Δₕ
     #Δᵢ, Δⱼ  = app.Δ (?) # Model grid-scale inferred from app properties in some way ? 
-    #ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
+    ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
   
     # Compute viscosity based on strain-rate
     # TODO: Provide general function hooks for TurbulenceClosures.jl 
@@ -365,7 +364,6 @@ function flux_second_order(app::DryAtmo, state_prognostic::Array{Float64, 1}, �
             (τ * ρ*u - ρ*ν/Pr*∇h)']
     
 end
-
 function flux_second_order_prim(app::DryAtmo, state_primitive::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
     ν, Pr = app.ν, app.Pr
     # 
@@ -379,9 +377,9 @@ function flux_second_order_prim(app::DryAtmo, state_primitive::Array{Float64, 1}
     # TODO: Provide general function hooks for TurbulenceClosures.jl 
     # FIXME: C_s a free parameter
     C_s = Float64(0.20)
-    Δ = Float64(250)
+    Δ = app.Δₕ
     #Δᵢ, Δⱼ  = app.Δ (?) # Model grid-scale inferred from app properties in some way ? 
-    #ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
+    ν = (C_s * Δ)^2 * sqrt(sum(S⃗ .* S⃗))
     # Neutral stratification turbulent-Prandtl number
     #Pr = Float64(1/3)
     # Compute stress tensor from strain-rate tensor

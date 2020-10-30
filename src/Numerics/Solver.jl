@@ -161,22 +161,25 @@ function solve!(solver::Solver)
         
         t += dt
       
-        if rem(ite, 500) == 0
-            state_prognostic_0 = similar(Q)
-            state_primitive_0 = similar(Q)
-            θ = similar(state_primitive_0[:,4,:])
-            prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
+        if rem(ite, 1000) == 0
+            @info "Plotting output at $(round(t)) simulation seconds"
+            state_prognostic_output = similar(Q)
+            prog_to_prim!(app, state_prognostic_output, solver.state_auxiliary_vol_l, state_primitive_0)
+            # Unpack Primitives
             p = state_primitive_0[:,4,:];
             ρ = state_primitive_0[:,1,:];
+            # Define AtmosConstants
             Rd = 287.058;
             cp = 1004.7;
             MSLP = 1.01325e5;
+            # Compute temperature variables
             state_primitive_T = p ./ ρ ./ Rd;
-            #θ = state_primitive_T .* (MSLP ./ p) .^ (Rd/cp) 
+            θ = state_primitive_T .* (MSLP ./ p) .^ (Rd/cp) 
+            # Plot outputs
             visual(mesh, state_primitive_0[:,1,:], "Rising_Bubble_rho_"*"$(round(t))"*".png")
             visual(mesh, state_primitive_0[:,2,:], "Rising_Bubble_u_"*"$(round(t))"*".png")
             visual(mesh, state_primitive_0[:,3,:], "Rising_Bubble_v_"*"$(round(t))"*".png")
-            #visual(mesh, θ, "Rising_Bubble_theta_init"*"$(round(t))"*".png")
+            visual(mesh, θ, "Rising_Bubble_theta_"*"$(round(t))"*".png")
         end
         
     end
