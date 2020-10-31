@@ -77,9 +77,9 @@ function compute_diffusivity(
   )
   C_s = m.C_s
   Δ = app.Δₕ
-  S = (∇u + ∇u')/2
+  S⃗ = (∇u + ∇u')/2
   ν = (C_s * Δ)^2 * sqrt(2 * sum(S⃗ * S⃗))
-  D = ν ./ m.Pr 
+  D = ν ./ app.Pr 
   return (ν,D)
 end
 

@@ -293,7 +293,7 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     # @show "vertical_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
 
     if app.num_state_gradient > 0
-        vertical_interface_second_order_tendency!(app, mesh, state_primitive, state_gradient, ∇state_gradient, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ)
+        #vertical_interface_second_order_tendency!(app, mesh, state_primitive, state_gradient, ∇state_gradient, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ)
   
     end
 

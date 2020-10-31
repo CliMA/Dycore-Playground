@@ -75,7 +75,8 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
     
     # diffusion model
-    diffusion_model = ConstantKinematic(100.0)
+    #diffusion_model = ConstantKinematic(50.0)
+    diffusion_model = Smagorinsky(0.23)
     @show (diffusion_model);
     
     app = DryAtmo("no-penetration", [0.0;0.0;0.0], "no-penetration", [0.0;0.0;0.0],  "periodic", nothing, "periodic", nothing, 
@@ -124,7 +125,7 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
 end
 
 
-vertical_method = "FV"
+vertical_method = "WENO3"
 Np = 3
 rising_bubble(vertical_method, Np)
 
