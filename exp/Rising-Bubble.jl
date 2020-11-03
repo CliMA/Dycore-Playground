@@ -54,7 +54,7 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     topology_type = "AtmoLES"
     
     
-    Nx, Nz = 10,  10*Nl
+    Nx, Nz = 8,  8*Nl
     Lx, Lz = 10000.0, 10000.0
     Δₕ, Δᵥ = Lx / Nx / Nl , Lz / Nz
     @printf("Δₕ=%f, Δᵥ=%f \n", Δₕ, Δᵥ)
@@ -76,7 +76,8 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
     
     # diffusion model
     #diffusion_model = ConstantKinematic(50.0)
-    diffusion_model = Smagorinsky(0.23)
+    #diffusion_model = Smagorinsky(0.23)
+    diffusion_model = Vreman(0.23)
     @show (diffusion_model);
     
     app = DryAtmo("no-penetration", [0.0;0.0;0.0], "no-penetration", [0.0;0.0;0.0],  "periodic", nothing, "periodic", nothing, 
@@ -125,7 +126,9 @@ function rising_bubble(vertical_method::String, Np::Int64=2, Nq::Int64=ceil(Int6
 end
 
 
-vertical_method = "WENO3"
-Np = 3
+vertical_method = "WENO5"
+@show(vertical_method);
+Np = 4
+@show(Np)
 rising_bubble(vertical_method, Np)
 

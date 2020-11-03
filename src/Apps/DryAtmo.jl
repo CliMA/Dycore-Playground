@@ -97,6 +97,30 @@ function compute_diffusivity(
   return (m.ν, m.ν/ app.Pr)
 end
 
+#
+### Vreman Dynamic Model
+#
+struct Vreman <: TurbulenceClosure
+  C_s::Float64
+end
+function compute_diffusivity(
+    m::Vreman,
+    app::DryAtmo,
+    ∇u::Array{Float64,2}
+  )
+  α = ∇u'
+  β = app.Δₕ^2 * α' * α
+  ## 3D Invariant Calculation
+  #B_β = β[1,1]*β[2,2] - β[1,2]^2 + β[1,1]*β[3,3] - β[1,3]^2 + β[2,2]*β[3,3] - β[2,3]^2
+  ## 2D Invariant Calculation
+  B_β = abs(β[1,1]*β[2,2] - β[1,2]^2)
+  c = m.C_s^2 * Float64(2.5)
+  ν = c * sqrt(B_β/(sum(α .^ 2)+Float64(1e-5)))
+  D = ν ./ app.Pr
+  return (ν, D)
+end
+
+
 # ======== Turbulence Closure Content ============= # 
 
 

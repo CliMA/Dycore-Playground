@@ -161,7 +161,7 @@ function solve!(solver::Solver)
         
         t += dt
       
-        if rem(ite, 1000) == 0
+        if rem(ite, 2000) == 0
             @info "Plotting output at $(round(t)) simulation seconds"
             state_primitive_0 = similar(Q)
             prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive_0)
@@ -293,8 +293,7 @@ function spatial_residual!(solver::Solver, Q::Array{Float64,3}, dQ::Array{Float6
     # @show "vertical_tendency! ", [norm(dQ[:,i,:]) for i = 1:size(dQ,2)]
 
     if app.num_state_gradient > 0
-        #vertical_interface_second_order_tendency!(app, mesh, state_primitive, state_gradient, ∇state_gradient, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ)
-  
+        vertical_interface_second_order_tendency!(app, mesh, state_primitive, state_gradient, ∇state_gradient, state_auxiliary_vol_l, state_auxiliary_surf_v, dQ)
     end
 
     source_tendency!(app, mesh, Q, state_auxiliary_vol_l, dQ)
