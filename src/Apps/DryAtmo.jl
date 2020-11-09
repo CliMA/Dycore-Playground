@@ -441,6 +441,9 @@ function numerical_flux_first_order_lmars(app::DryAtmo,
     a⁺ = soundspeed_air(app, ρ⁺,  p⁺)
     h⁺ = total_specific_enthalpy(app, ρe⁺, ρ⁺,  p⁺)
 
+    p⁻ = p⁻ - p_ref⁻
+    p⁺ = p⁺ - p_ref⁺
+    
     β = Float64(1)
     u_half = 1/2 * (dot(u⁻,n_ij) + dot(u⁺,n_ij)) - β * 1/(ρ⁺ + ρ⁻)/a⁻*(p⁺ - p⁻)
     p_half = 1/2 * (p⁺ + p⁻) - β * ((ρ⁻ + ρ⁺) * a⁻)/4 * (dot(u⁺,n_ij) - dot(u⁻,n_ij))
@@ -449,7 +452,7 @@ function numerical_flux_first_order_lmars(app::DryAtmo,
     ρu_b = u_half > Float64(0) ? ρu⁻ : ρu⁺
     ρh_b = u_half > Float64(0) ? ρ⁻*h⁻ : ρ⁺*h⁺
     
-    flux = [ρ_h*u_half ; ρu_b*u_half .+ p_half * n_ij ; ρh_b * u_half]
+    flux = [ρ_b*u_half ; ρu_b*u_half .+ p_half * n_ij ; ρh_b * u_half]
 
     return flux
 end
