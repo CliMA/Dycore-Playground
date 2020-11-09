@@ -442,8 +442,8 @@ function numerical_flux_first_order_lmars(app::DryAtmo,
     h⁺ = total_specific_enthalpy(app, ρe⁺, ρ⁺,  p⁺)
 
     β = Float64(1)
-    u_half = 1/2 * (u⁻ * n_ij + u⁺ * n_ij) - β * 1/(ρ⁺ + ρ⁻)/c⁻*(p⁺-p⁻)
-    p_half = 1/2 * (p⁺ + p⁻) - β * ((ρ⁻ + ρ⁺) * c⁻)/4 * (u⁺ * n_ij - u⁻ * n_ij)
+    u_half = 1/2 * (dot(u⁻,n_ij) + dot(u⁺,n_ij)) - β * 1/(ρ⁺ + ρ⁻)/a⁻*(p⁺ - p⁻)
+    p_half = 1/2 * (p⁺ + p⁻) - β * ((ρ⁻ + ρ⁺) * a⁻)/4 * (dot(u⁺,n_ij) - dot(u⁻,n_ij))
 
     ρ_b = u_half > Float64(0) ? ρ⁻ : ρ⁺
     ρu_b = u_half > Float64(0) ? ρu⁻ : ρu⁺
