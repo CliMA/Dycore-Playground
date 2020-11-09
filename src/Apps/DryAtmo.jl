@@ -410,6 +410,50 @@ function numerical_flux_first_order(app::DryAtmo,
 end
 
 
+function numerical_flux_first_order_lmars(app::DryAtmo, 
+    state_prognostic⁻::Array{Float64, 1}, state_auxiliary⁻::Array{Float64, 1},
+    state_prognostic⁺::Array{Float64, 1}, state_auxiliary⁺::Array{Float64, 1},
+    n::Array{Float64, 1})
+    
+    dim = 2
+    
+    n_len = sqrt(n[1]^2 + n[2]^2)
+    n_ij = n / n_len
+    t_ij = [-n_ij[2], n_ij[1]]
+    
+    Φ = state_auxiliary⁻[1]
+    p_ref⁻, p_ref⁺ = state_auxiliary⁻[4], state_auxiliary⁺[4]
+    
+    
+    γ = app.γ
+    
+    ρ⁻, ρu⁻, ρe⁻ = state_prognostic⁻[1], state_prognostic⁻[2:dim+1], state_prognostic⁻[dim+2]
+    u⁻ = ρu⁻/ρ⁻
+    e_int⁻ = internal_energy(app, ρ⁻, ρu⁻, ρe⁻, Φ)
+    p⁻ = air_pressure(app, ρ⁻,  e_int⁻)
+    a⁻ = soundspeed_air(app, ρ⁻,  p⁻)
+    h⁻ = total_specific_enthalpy(app, ρe⁻, ρ⁻,  p⁻)
+    
+    ρ⁺, ρu⁺, ρe⁺ = state_prognostic⁺[1], state_prognostic⁺[2:dim+1], state_prognostic⁺[dim+2]
+    u⁺ = ρu⁺/ρ⁺
+    e_int⁺ = internal_energy(app, ρ⁺, ρu⁺, ρe⁺, Φ)
+    p⁺ = air_pressure(app, ρ⁺,  e_int⁺)
+    a⁺ = soundspeed_air(app, ρ⁺,  p⁺)
+    h⁺ = total_specific_enthalpy(app, ρe⁺, ρ⁺,  p⁺)
+
+    β = Float64(1)
+    u_half = 1/2 * (u⁻ * n_ij + u⁺ * n_ij) - β * 1/(ρ⁺ + ρ⁻)/c⁻*(p⁺-p⁻)
+    p_half = 1/2 * (p⁺ + p⁻) - β * ((ρ⁻ + ρ⁺) * c⁻)/4 * (u⁺ * n_ij - u⁻ * n_ij)
+
+    ρ_b = u_half > Float64(0) ? ρ⁻ : ρ⁺
+    ρu_b = u_half > Float64(0) ? ρu⁻ : ρu⁺
+    ρh_b = u_half > Float64(0) ? ρ⁻*h⁻ : ρ⁺*h⁺
+    
+    flux = [ρ_h*u_half ; ρu_b*u_half .+ p_half * n_ij ; ρh_b * u_half]
+
+    return flux
+end
+
 
 function flux_second_order(app::DryAtmo, state_prognostic::Array{Float64, 1}, ∇state_gradient::Array{Float64, 2}, state_auxiliary::Array{Float64, 1})
     # Update ν, D_t using dynamic model
