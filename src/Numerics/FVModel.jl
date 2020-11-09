@@ -344,7 +344,7 @@ function vertical_interface_first_order_tendency!(
                     n1, n2 = -n1, -n2
                     if bc_bottom_type == "periodic"
                         # use the auxiliary state in  local_aux⁺
-                        local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁺, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
+                        local_flux = numerical_flux_first_order_lmars(app, state_prognostic_face⁻[:, iz], local_aux⁺, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     elseif bc_bottom_type == "no-slip" || bc_bottom_type == "no-penetration"
                         
                         local_flux = wall_flux_first_order(app, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
@@ -364,12 +364,12 @@ function vertical_interface_first_order_tendency!(
                     (n1, n2, sM) = sgeo_v[:, il, end, e⁻] 
                     if bc_top_type == "periodic"
                         # use the auxiliary state in  local_aux⁻
-                        local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
+                        local_flux = numerical_flux_first_order_lmars(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
                         
                     elseif bc_top_type == "outlet"
                         
                         # use the auxiliary state in  local_aux⁻
-                        local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
+                        local_flux = numerical_flux_first_order_lmars(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁻, [n1;n2])
                         
                         # @info state_prognostic_face⁻[:, iz],  state_prognostic_face⁺[:, iz]
                         
@@ -398,7 +398,7 @@ function vertical_interface_first_order_tendency!(
                     (n1, n2, sM) = sgeo_v[:, il, end, e⁻]    
                     
                     
-                    local_flux = numerical_flux_first_order(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
+                    local_flux = numerical_flux_first_order_lmars(app, state_prognostic_face⁻[:, iz], local_aux⁻, state_prognostic_face⁺[:, iz], local_aux⁺, [n1;n2])
                     
                     
                     
