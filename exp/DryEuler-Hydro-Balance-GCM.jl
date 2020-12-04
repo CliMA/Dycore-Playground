@@ -40,27 +40,9 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     num_state_prognostic, nelem = app.num_state_prognostic, Nx*Nz 
     state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
     T_virt_surf, T_min_ref, H_t = 280.0, 230.0, 9.0e3
-    # profile = init_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     profile = init_discrete_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     set_init_state!(solver, state_prognostic_0)
 
-
-
-    # update reference state
-    # T_virt_surf, T_min_ref, H_t =  290.0, 220.0, 8.0e3
-    # state_prognostic_ref = ones(Nl, num_state_prognostic, nelem)
-    # profile_ref = init_hydrostatic_balance!(app,  mesh,  state_prognostic_ref, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
-    # state_auxiliary_vol_l  =  solver.state_auxiliary_vol_l     
-    # state_auxiliary_vol_q  =  solver.state_auxiliary_vol_q   
-    # state_auxiliary_surf_h =  solver.state_auxiliary_surf_h   
-    # state_auxiliary_surf_v =  solver.state_auxiliary_surf_v
-    # state_primitive_ref = similar(state_prognostic_ref)
-    # prog_to_prim!(app, state_prognostic_ref, solver.state_auxiliary_vol_l, state_primitive_ref)
-    # update_state_auxiliary!(app, mesh, state_primitive_ref, state_auxiliary_vol_l, state_auxiliary_vol_q, state_auxiliary_surf_h, state_auxiliary_surf_v)
-
-
-
-    # visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_GCM_init_"*vertical_method*".png")
 
  
     Q = solve!(solver)
