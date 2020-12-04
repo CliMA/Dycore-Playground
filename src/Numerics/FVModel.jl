@@ -466,8 +466,8 @@ function vertical_interface_second_order_tendency!(
                 # bottom 
                 if iz == 1
                     
-                    x,  z =  sgeo_v[1:2, il , 1, e⁺]
-                    xp,  zp =  sgeo_v[1:2, il , end, e⁻]
+                    x,  z =  sgeo_v[4:5, il , 1, e⁺]
+                    xp,  zp =  sgeo_v[4:5, il , end, e⁻]
                     if bc_bottom_type == "periodic"
                         state_primitive_face = (state_primitive[il, :, e⁻]*Δz⁺ + state_primitive[il, :, e⁺]*Δz⁻)/(Δz⁺ + Δz⁻)
                         ∇state_gradient_face =  gradient_correction(∇state_gradient⁻, state_gradient⁻, Δz⁻,  ∇state_gradient⁺, state_gradient⁺, Δz⁺, [x⁺-x+xp-x⁻, z⁺-z+zp-z⁻])
@@ -488,8 +488,8 @@ function vertical_interface_second_order_tendency!(
                     # top 
                 elseif iz == Nz+1
 
-                    x,  z =  sgeo_v[1:2, il , end, e⁻]
-                    xp,  zp =  sgeo_v[1:2, il , 1, e⁺]
+                    x,  z =  sgeo_v[4:5, il , end, e⁻]
+                    xp,  zp =  sgeo_v[4:5, il , 1, e⁺]
                     if bc_top_type == "periodic"
                         state_primitive_face = (state_primitive[il, :, e⁻]*Δz⁺ + state_primitive[il, :, e⁺]*Δz⁻)/(Δz⁺ + Δz⁻)
                         ∇state_gradient_face =  gradient_correction(∇state_gradient⁻, state_gradient⁻, Δz⁻,  ∇state_gradient⁺, state_gradient⁺, Δz⁺, [x-x⁻+x⁺-xp, z-z⁻+z⁺-zp])
@@ -506,7 +506,6 @@ function vertical_interface_second_order_tendency!(
                     end
                     
                     tendency[il, :,  e⁻]  .-=  sM * local_flux
-                    
                     
                 else
  
