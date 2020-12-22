@@ -5,68 +5,59 @@ include("../src/Numerics/Solver.jl")
 import PyPlot
 
 
-function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz::Int64=32)
+function constant_test(vertical_method::String, t_end::Float64 = 100.0, Nz::Int64=32)
     
-    Np = 3
+    Np = 4
     Nl = Np+1
     Nq = ceil(Int64, (3*Np + 1)/2)
     topology_type = "AtmoLES"
     
     
     
-    Nx = 16
-    Lx, Lz = 16.0e3, 8.0e3
+    Nx = 2
+    Lx, Lz = 20.0e3, 30.0e3
     
     
     topology_size = [Lx; Lz]
     topology = topology_les(Nl, Nx, Nz, Lx, Lz)
-    mountain_wrap_les!(Nl, Nx, Nz, Lx, Lz, topology)
-
     mesh = Mesh(Nx, Nz, Nl, Nq, topology_type, topology_size, topology)
     viscous, ν, Pr = false, NaN64, NaN64
-    gravity = true
-    hydrostatic_balance = true
+    gravity = false
+    hydrostatic_balance = false
     
     
     
     num_state_prognostic = 4
     
-    app = DryAtmo("no-penetration", nothing, "no-penetration", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, viscous, ν, Pr, gravity, hydrostatic_balance)
-    update_sponge_params!(app, -1.0, Lz, Lz*1/2.0)
-        
-    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
+
+    app = DryAtmo("no-penetration", nothing, "no-penetration", nothing,  "periodic", nothing, "periodic", nothing, 
+    viscous, ν, Pr, gravity, hydrostatic_balance)
+    # update_sponge_params!(app, -1.0, Lz, Lz*1/2.0)
+
+    cfl = 0.8
+    dt0 = min(cfl/Np^2*Lx/Nx/330, cfl*Lz/Nz/330)
+    params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8, "dt0" => dt0, "t_end" => t_end, "vertical_method" => vertical_method)
     solver = Solver(app, mesh, params)
     
     
+    # set initial condition 
     num_state_prognostic, nelem = app.num_state_prognostic, Nx*Nz
     
-    
+    state_prognostic_0 = zeros(Nl, num_state_prognostic, nelem)
+    state_prognostic_0[:, 1, :] .= 1.0
+    state_prognostic_0[:, 4, :] .= 10000.0
 
-    # set initial condition
-    state_prognostic_0 = ones(Nl, num_state_prognostic, nelem)
-    T_virt_surf, T_min_ref, H_t = 280.0, 230.0, 9.0e3
-    profile_0 = init_discrete_hydrostatic_balance!(app,  mesh,  state_prognostic_0, solver.state_auxiliary_vol_l,  T_virt_surf, T_min_ref, H_t)
     set_init_state!(solver, state_prognostic_0)
 
 
-
-    # visualize
-    visual(mesh, state_prognostic_0[:,1,:], "Hydrostatic_Balance_Mountain_init_"*vertical_method*".png")
-
-    # solve
     Q = solve!(solver)
-    
+
     state_primitive = solver.state_primitive
     prog_to_prim!(app, Q, solver.state_auxiliary_vol_l, state_primitive)
     ρ  = reshape(state_primitive[:, 1 ,:], (Nl * Nx, Nz))
     u  = reshape(state_primitive[:, 2 ,:], (Nl * Nx, Nz))
     w  = reshape(state_primitive[:, 3 ,:], (Nl * Nx, Nz))
     p  = reshape(state_primitive[:, 4 ,:], (Nl * Nx, Nz))
-
-    visual(mesh, ρ, "Hydrostatic_Balance_Mountain_rho_"*vertical_method*".png")
-    visual(mesh, u, "Hydrostatic_Balance_Mountain_u_"*vertical_method*".png")
-    visual(mesh, w, "Hydrostatic_Balance_Mountain_w_"*vertical_method*".png")
-    visual(mesh, p, "Hydrostatic_Balance_Mountain_p_"*vertical_method*".png")
 
     state_primitive_0 = copy(solver.state_primitive)
     prog_to_prim!(app, state_prognostic_0, solver.state_auxiliary_vol_l, state_primitive_0)
@@ -91,7 +82,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     ax3.plot(p[nx_plot, :], zz, "-", fillstyle = "none", label = vertical_method)
     ax3.legend()
     ax3.set_xlabel("p")
-    fig.savefig("Hydrostatic_Balance_Mountain"*vertical_method*"_x.png")
+    fig.savefig("Hydrostatic_Balance"*vertical_method*"_x.png")
 
 
 
@@ -110,14 +101,12 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     ax3.plot(xx, p[:, nz_plot], "-", fillstyle = "none", label = vertical_method)
     ax3.legend()
     ax3.set_ylabel("p")
-    fig.savefig("Hydrostatic_Balance_Mountain"*vertical_method*"_z.png")
+    fig.savefig("Hydrostatic_Balance"*vertical_method*"_z.png")
     
 end
 
-t_end = 86400.0 / 2.0
+t_end = 86400.0 
 Nz = 32
-hydrostatic_balance("FV",    t_end,  Nz)
-# hydrostatic_balance("WENO3", t_end,  Nz)
-# hydrostatic_balance("WENO5", t_end,  Nz)
-
-
+constant_test("FV",    t_end,  Nz)
+#hydrostatic_balance("WENO3", t_end,  Nz)
+#hydrostatic_balance("WENO5", t_end,  Nz)
