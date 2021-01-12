@@ -14,8 +14,8 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
     
     
-    Nx = 1
-    Lx, Lz = 2.0e3, 30.0e3
+    Nx = 2
+    Lx, Lz = 8.0e3, 30.0e3
     
     
     topology_size = [Lx; Lz]
@@ -30,7 +30,7 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     num_state_prognostic = 4
     
     app = DryAtmo("no-penetration", nothing, "no-penetration", zeros(Float64, num_state_prognostic),  "periodic", nothing, "periodic", nothing, viscous, ν, Pr, gravity, hydrostatic_balance)
-    update_sponge_params!(app, -1.0, Lz, Lz*1/2.0)
+    # update_sponge_params!(app, -1.0, Lz, Lz*1/2.0)
     params = Dict("time_integrator" => "RK2", "cfl_freqency" => -1, "cfl" => 0.8/Np, "dt0" => 10.0, "t_end" => t_end, "vertical_method" => vertical_method)
     solver = Solver(app, mesh, params)
     
@@ -103,8 +103,8 @@ function hydrostatic_balance(vertical_method::String, t_end::Float64 = 100.0, Nz
     
 end
 
-t_end = 5000.0 #86400.0 
-Nz = 32
+t_end = 86400.0*10
+Nz = 30
 hydrostatic_balance("FV",    t_end,  Nz)
 #hydrostatic_balance("WENO3", t_end,  Nz)
 #hydrostatic_balance("WENO5", t_end,  Nz)
