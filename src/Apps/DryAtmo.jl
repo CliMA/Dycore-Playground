@@ -514,8 +514,8 @@ function init_discrete_hydrostatic_balance!(app::DryAtmo, mesh::Mesh, state_prog
     for ix = 1:Nx
         for il = 1:Nl
             
-            p⁻, ρ⁻, Δz⁻ = 0.0, 0.0, 0.0
-            for iz = 1:Nz
+            p⁺, ρ⁺, Δz⁺ = 0.0, 0.0, 0.0
+            for iz = Nz:-1:1 #1:Nz
                 e  = ix + (iz - 1)*Nx
                 # p_{iz - 1}  - p_{iz} - = ρ_{iz}*g*Δz_{iz}/2 + ρ_{iz-1}*g*Δz_{iz-1}/2
                 Δz = Δzc[il, ix, iz]
@@ -523,13 +523,17 @@ function init_discrete_hydrostatic_balance!(app::DryAtmo, mesh::Mesh, state_prog
                 alt = Φ/g
                 Tv, p, ρ = profile(alt)
                 
-                if iz > 1
+                if iz < Nz
                     # hydrostatic correction
                     # @show ρ, (p⁻ - p -  ρ⁻*g*Δz⁻/2.0)/ (g*Δz/2.0)
-                    ρ = (p⁻ - p -  ρ⁻*g*Δz⁻/2.0)/ (g*Δz/2.0)
+                    ρ = (p - p⁺ -  ρ⁺*g*Δz⁺/2.0)/ (g*Δz/2.0)
                     
+                
+                else
+                    ρ = ρ*0.996
                 end
-                p⁻, ρ⁻, Δz⁻  = p, ρ, Δz
+                p⁺, ρ⁺, Δz⁺  = p, ρ, Δz
+
                 
                 # if ix == 1 && il == 1
                 #     @show iz, p, ρ, Δz
@@ -582,7 +586,7 @@ and app.bc_top_data
 """
 function init_discrete_hydrostatic_balance!(app::DryAtmo, mesh::Mesh, state_prognostic::Array{Float64, 3}, state_auxiliary::Array{Float64, 3},
     f_profile::Function, u_init::Array{Float64, 1})
-    
+    error("This function is not used")
     @show  f_profile
     
     Nl,Nx,Nz = mesh.Nl, mesh.Nx, mesh.Nz
